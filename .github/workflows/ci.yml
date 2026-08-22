@@ -75,7 +75,7 @@ jobs:
           cmake -B injamm-build -S injamm -G Ninja \
             -DCMAKE_TOOLCHAIN_FILE=$HOME/vcpkg/scripts/buildsystems/vcpkg.cmake \
             -DCMAKE_INSTALL_PREFIX=$HOME/injamm-install \
-            -DBUILD_TEST=OFF -DBUILD_EXAMPLE=OFF
+            -DBUILD_TEST=OFF -DBUILD_EXAMPLE=OFF -DENABLE_SQLITE3=OFF
           cmake --build injamm-build
           cmake --install injamm-build
 
