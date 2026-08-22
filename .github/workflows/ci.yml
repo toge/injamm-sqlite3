@@ -1,0 +1,92 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  # テスト済み injamm リビジョン (README の記載と合わせて更新する)
+  INJAMM_REF: 9a6d95c
+  INJAMM_REPO: https://github.com/toge/injamm.git
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - compiler: gcc
+          - compiler: clang
+
+    container: fedora:latest
+
+    env:
+      CC: ${{ matrix.compiler == 'gcc' && 'gcc' || 'clang' }}
+      CXX: ${{ matrix.compiler == 'gcc' && 'g++' || 'clang++' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build tools
+        run: |
+          if [ "${{ matrix.compiler }}" = "clang" ]; then
+            dnf install -y clang cmake ninja-build git curl zip unzip tar sqlite-devel
+          else
+            dnf install -y gcc-c++ cmake ninja-build git curl zip unzip tar sqlite-devel
+          fi
+
+      - name: Check compiler version
+        run: |
+          $CXX --version
+          if [ "${{ matrix.compiler }}" = "gcc" ]; then
+            $CXX -dumpversion | grep -E "^(1[4-9]|[2-9][0-9])(\.|\$)" || { echo "ERROR: GCC 14+ required, found $($CXX -dumpversion)"; exit 1; }
+          fi
+
+      # テスト対象の injamm 本体を固定リビジョンで取得してインストール
+      - name: Restore vcpkg cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/vcpkg
+            build/vcpkg_installed
+            injamm-build/vcpkg_installed
+          key: ${{ runner.os }}-${{ matrix.compiler }}-vcpkg-${{ hashFiles('vcpkg.json') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.compiler }}-vcpkg-
+
+      - name: Install vcpkg
+        run: |
+          if [ ! -d ~/vcpkg ]; then
+            git clone https://github.com/microsoft/vcpkg.git ~/vcpkg
+            ~/vcpkg/bootstrap-vcpkg.sh
+          fi
+
+      - name: Install injamm
+        run: |
+          git clone $INJAMM_REPO injamm
+          cd injamm
+          git fetch --depth 1 origin $INJAMM_REF
+          git checkout FETCH_HEAD
+          cd ..
+          cmake -B injamm-build -S injamm -G Ninja \
+            -DCMAKE_TOOLCHAIN_FILE=$HOME/vcpkg/scripts/buildsystems/vcpkg.cmake \
+            -DCMAKE_INSTALL_PREFIX=$HOME/injamm-install \
+            -DBUILD_TEST=OFF -DBUILD_EXAMPLE=OFF
+          cmake --build injamm-build
+          cmake --install injamm-build
+
+      - name: Configure
+        run: |
+          cmake -B build -S . -G Ninja \
+            -DCMAKE_TOOLCHAIN_FILE=$HOME/vcpkg/scripts/buildsystems/vcpkg.cmake \
+            -DCMAKE_PREFIX_PATH=$HOME/injamm-install
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Test
+        run: ctest --test-dir build -V

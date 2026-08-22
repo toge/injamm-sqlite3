@@ -1,0 +1,20 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "dependencies": [
+    "glaze",
+    {
+      "name": "fmt",
+      "platform": "osx | linux"
+    },
+    "catch2",
+    "sqlite3",
+    "enchantum"
+  ],
+  "overrides": [
+    {
+      "name": "enchantum",
+      "version": "0.4.0",
+      "port-version": 1
+    }
+  ]
+}
