@@ -150,4 +150,42 @@ TEST_CASE("sqlite3 adapter", "[sqlite3]") {
 
     sqlite3_finalize(stmt);
   }
+
+  // 整数列の数値比較: {{#if age > 18}} が評価される
+  SECTION("numeric comparison with integer column") {
+    test_db db;
+    sqlite3_stmt* stmt = prepare(db, "SELECT id AS age FROM users WHERE id = 2");
+    REQUIRE(sqlite3_step(stmt) == SQLITE_ROW);
+
+    auto row    = injamm::sqlite3::sqlite3_row_view{stmt};
+    auto eng    = injamm::sqlite3::runtime_engine<injamm::sqlite3::sqlite3_row_view>("{{#if age > 1}}GT{{else}}LE{{/if}}");
+    auto result = eng.render(row);
+    REQUIRE(result.has_value());
+    CHECK(*result == "GT");
+    sqlite3_finalize(stmt);
+
+    stmt = prepare(db, "SELECT id AS age FROM users WHERE id = 1");
+    REQUIRE(sqlite3_step(stmt) == SQLITE_ROW);
+    auto row2   = injamm::sqlite3::sqlite3_row_view{stmt};
+    auto result2 = injamm::sqlite3::runtime_engine<injamm::sqlite3::sqlite3_row_view>("{{#if age > 1}}GT{{else}}LE{{/if}}").render(row2);
+    REQUIRE(result2.has_value());
+    CHECK(*result2 == "LE");
+    sqlite3_finalize(stmt);
+  }
+
+  // 整数フィルタ: 文字列値でも hex / zerofill が適用される
+  SECTION("integer filters on runtime values") {
+    test_db       db;
+    sqlite3_stmt* stmt = prepare(db, "SELECT 255 AS v, 7 AS n");
+    REQUIRE(sqlite3_step(stmt) == SQLITE_ROW);
+
+    auto row    = injamm::sqlite3::sqlite3_row_view{stmt};
+    auto eng    = injamm::sqlite3::runtime_engine<injamm::sqlite3::sqlite3_row_view>("{{v | hex}} {{n | zerofill(4)}}");
+    auto result = eng.render(row);
+    REQUIRE(result.has_value());
+    CHECK(*result == "ff 0007");
+
+    sqlite3_finalize(stmt);
+  }
 }
+
