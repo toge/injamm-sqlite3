@@ -121,3 +121,7 @@ injamm-sqlite3
 
 - 全て `injamm::sqlite3` 以下
 - 内部実装は `injamm::sqlite3::detail` (`injamm::detail` のエイリアス)
+
+### ディスパッチ
+
+GCC では core と共通の computed-goto (threaded) dispatch が自動有効になります(`INJAMM_NO_THREADED_DISPATCH` を自分で定義すれば無効化可能)。`tests/bench_dispatch.cpp` に計測用ベンチマークがあります。

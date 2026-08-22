@@ -61,4 +61,8 @@ if(NOT EMSCRIPTEN)
   target_link_libraries(injamm-sqlite3_test PRIVATE injamm-sqlite3 Catch2::Catch2WithMain SQLite3::SQLite3)
   catch_discover_tests(injamm-sqlite3_test)
   add_test(NAME injamm-sqlite3_test COMMAND injamm-sqlite3_test)
+
+  # Dispatch benchmark (manual run, not registered with ctest)
+  add_executable(injamm-sqlite3_bench bench_dispatch.cpp)
+  target_link_libraries(injamm-sqlite3_bench PRIVATE injamm-sqlite3 SQLite3::SQLite3)
 endif()

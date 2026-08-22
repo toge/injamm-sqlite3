@@ -34,9 +34,6 @@ target_include_directories(injamm-sqlite3 INTERFACE
   $<INSTALL_INTERFACE:include>
 )
 target_link_libraries(injamm-sqlite3 INTERFACE injamm::injamm unofficial::sqlite3::sqlite3)
-# executor.hpp は core VM (injamm/bytecode_exec.hpp) への委譲シムだが、row_view 型が
-# GCC computed-goto パスを通るカバレッジがまだ無いため無効化を維持する。
-target_compile_definitions(injamm-sqlite3 INTERFACE INJAMM_NO_THREADED_DISPATCH)
 
 # ---- Install ----
 include(GNUInstallDirs)
