@@ -565,6 +565,7 @@ jobs:
             -DVCPKG_TARGET_TRIPLET=wasm32-emscripten \
             -DVCPKG_CHAINLOAD_TOOLCHAIN_FILE=$EMSDK/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake \
             -DCMAKE_PREFIX_PATH=$HOME/injamm-install \
+            -Dinjamm_DIR=$HOME/injamm-install/lib/cmake/injamm \
             -DBUILD_EXAMPLE=OFF \
             -DBUILD_FUZZ=OFF
       - name: Build

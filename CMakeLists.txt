@@ -21,6 +21,10 @@ if(NOT Threads_FOUND)
 endif()
 
 find_package(unofficial-sqlite3 CONFIG REQUIRED)
+# injamm (AppleClang) は USE_FMT=ON で fmt::fmt にリンクするが、
+# injammConfig.cmake が find_dependency(fmt) を行わないため、
+# 予め downstream 側で見つけておく必要がある。
+find_package(fmt CONFIG QUIET)
 find_package(injamm CONFIG REQUIRED)
 
 option(BUILD_TEST "Build tests" ON)
