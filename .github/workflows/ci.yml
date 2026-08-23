@@ -8,7 +8,7 @@ on:
 
 env:
   # テスト済み injamm リビジョン (README の記載と合わせて更新する)
-  INJAMM_REF: 2707701333bb4953e08437890ef4e61b31189cea
+  INJAMM_REF: 48883ddf8a6febb385a809d8bddab0fd5d0ed3d2
   INJAMM_REPO: https://github.com/toge/injamm.git
 
 jobs:
@@ -75,7 +75,7 @@ jobs:
           cmake -B injamm-build -S injamm -G Ninja \
             -DCMAKE_TOOLCHAIN_FILE=$HOME/vcpkg/scripts/buildsystems/vcpkg.cmake \
             -DCMAKE_INSTALL_PREFIX=$HOME/injamm-install \
-            -DBUILD_TEST=OFF -DBUILD_EXAMPLE=OFF -DENABLE_SQLITE3=OFF
+            -DBUILD_TEST=OFF -DBUILD_EXAMPLE=OFF
           cmake --build injamm-build
           cmake --install injamm-build
 
