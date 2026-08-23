@@ -19,10 +19,18 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - compiler: gcc
-          - compiler: clang
+          # GCC マトリクス (injamm と同条件)
+          # gcc 16 : Fedora 44
+          # gcc 15 : Fedora 43
+          # gcc 14 : Fedora 41
+          - fedora_version: "44"
+            compiler: gcc
+          - fedora_version: "43"
+            compiler: gcc
+          - fedora_version: "41"
+            compiler: gcc
 
-    container: fedora:latest
+    container: fedora:${{ matrix.fedora_version }}
 
     env:
       CC: ${{ matrix.compiler == 'gcc' && 'gcc' || 'clang' }}
@@ -34,9 +42,9 @@ jobs:
       - name: Install build tools
         run: |
           if [ "${{ matrix.compiler }}" = "clang" ]; then
-            dnf install -y clang cmake ninja-build git curl zip unzip tar sqlite-devel
+            dnf install -y clang cmake ninja-build git curl zip unzip tar nodejs sqlite-devel
           else
-            dnf install -y gcc-c++ cmake ninja-build git curl zip unzip tar sqlite-devel
+            dnf install -y gcc-c++ cmake ninja-build git curl zip unzip tar nodejs sqlite-devel
           fi
 
       - name: Check compiler version
@@ -46,7 +54,6 @@ jobs:
             $CXX -dumpversion | grep -E "^(1[4-9]|[2-9][0-9])(\.|\$)" || { echo "ERROR: GCC 14+ required, found $($CXX -dumpversion)"; exit 1; }
           fi
 
-      # テスト対象の injamm 本体を固定リビジョンで取得してインストール
       - name: Restore vcpkg cache
         uses: actions/cache@v4
         with:
@@ -54,9 +61,9 @@ jobs:
             ~/vcpkg
             build/vcpkg_installed
             injamm-build/vcpkg_installed
-          key: ${{ runner.os }}-${{ matrix.compiler }}-vcpkg-${{ hashFiles('vcpkg.json') }}
+          key: ${{ runner.os }}-fedora-${{ matrix.fedora_version }}-${{ matrix.compiler }}-vcpkg-${{ hashFiles('vcpkg.json') }}
           restore-keys: |
-            ${{ runner.os }}-${{ matrix.compiler }}-vcpkg-
+            ${{ runner.os }}-fedora-${{ matrix.fedora_version }}-${{ matrix.compiler }}-vcpkg-
 
       - name: Install vcpkg
         run: |
@@ -90,3 +97,652 @@ jobs:
 
       - name: Test
         run: ctest --test-dir build -V
+
+  build-arm64:
+    runs-on: ubuntu-24.04-arm
+    container: fedora:44
+
+    env:
+      CC: gcc
+      CXX: g++
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build tools
+        run: |
+          dnf install -y gcc-c++ cmake ninja-build git curl zip unzip tar nodejs sqlite-devel
+
+      - name: Check GCC version
+        run: |
+          g++ --version
+          g++ -dumpversion | grep -E "^(1[4-9]|[2-9][0-9])(\.|\$)" || { echo "ERROR: GCC 14+ required, found $(g++ -dumpversion)"; exit 1; }
+
+      - name: Restore vcpkg cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/vcpkg
+            build-arm64/vcpkg_installed
+            injamm-build/vcpkg_installed
+          key: ${{ runner.os }}-arm64-vcpkg-${{ hashFiles('vcpkg.json') }}
+          restore-keys: |
+            ${{ runner.os }}-arm64-vcpkg-
+
+      - name: Install vcpkg
+        run: |
+          if [ ! -d ~/vcpkg ]; then
+            git clone https://github.com/microsoft/vcpkg.git ~/vcpkg
+            ~/vcpkg/bootstrap-vcpkg.sh
+          fi
+
+      - name: Install injamm
+        run: |
+          git clone $INJAMM_REPO injamm
+          cd injamm
+          git fetch --depth 1 origin $INJAMM_REF
+          git checkout FETCH_HEAD
+          cd ..
+          cmake -B injamm-build -S injamm -G Ninja \
+            -DCMAKE_TOOLCHAIN_FILE=$HOME/vcpkg/scripts/buildsystems/vcpkg.cmake \
+            -DCMAKE_INSTALL_PREFIX=$HOME/injamm-install \
+            -DBUILD_TEST=OFF -DBUILD_EXAMPLE=OFF
+          cmake --build injamm-build
+          cmake --install injamm-build
+
+      - name: Configure
+        run: |
+          cmake -B build-arm64 -S . -G Ninja \
+            -DCMAKE_TOOLCHAIN_FILE=$HOME/vcpkg/scripts/buildsystems/vcpkg.cmake \
+            -DCMAKE_PREFIX_PATH=$HOME/injamm-install
+
+      - name: Build
+        run: cmake --build build-arm64
+
+      - name: Test
+        run: ctest --test-dir build-arm64 -V
+
+  no-enum:
+    runs-on: ubuntu-latest
+    container: fedora:44
+
+    env:
+      CC: gcc
+      CXX: g++
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build tools
+        run: dnf install -y gcc-c++ cmake ninja-build git curl zip unzip tar nodejs sqlite-devel
+
+      - name: Check GCC version
+        run: |
+          g++ --version
+          g++ -dumpversion | grep -E "^(1[4-9]|[2-9][0-9])(\.|\$)" || { echo "ERROR: GCC 14+ required, found $(g++ -dumpversion)"; exit 1; }
+
+      - name: Restore vcpkg cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/vcpkg
+            build-noenum/vcpkg_installed
+            injamm-build/vcpkg_installed
+          key: ${{ runner.os }}-fedora-44-noenum-vcpkg-${{ hashFiles('vcpkg.json') }}
+          restore-keys: |
+            ${{ runner.os }}-fedora-44-noenum-vcpkg-
+
+      - name: Install vcpkg
+        run: |
+          if [ ! -d ~/vcpkg ]; then
+            git clone https://github.com/microsoft/vcpkg.git ~/vcpkg
+            ~/vcpkg/bootstrap-vcpkg.sh
+          fi
+
+      - name: Install injamm (ENABLE_ENUM=OFF)
+        run: |
+          git clone $INJAMM_REPO injamm
+          cd injamm
+          git fetch --depth 1 origin $INJAMM_REF
+          git checkout FETCH_HEAD
+          cd ..
+          cmake -B injamm-build -S injamm -G Ninja \
+            -DCMAKE_TOOLCHAIN_FILE=$HOME/vcpkg/scripts/buildsystems/vcpkg.cmake \
+            -DCMAKE_INSTALL_PREFIX=$HOME/injamm-install \
+            -DBUILD_TEST=OFF -DBUILD_EXAMPLE=OFF \
+            -DENABLE_ENUM=OFF
+          cmake --build injamm-build
+          cmake --install injamm-build
+
+      - name: Configure (ENABLE_ENUM=OFF)
+        run: |
+          cmake -B build-noenum -S . -G Ninja \
+            -DCMAKE_TOOLCHAIN_FILE=$HOME/vcpkg/scripts/buildsystems/vcpkg.cmake \
+            -DCMAKE_PREFIX_PATH=$HOME/injamm-install \
+            -DENABLE_ENUM=OFF
+
+      - name: Build
+        run: cmake --build build-noenum
+
+      - name: Test
+        run: ctest --test-dir build-noenum -V
+
+  sanitizer:
+    runs-on: ubuntu-latest
+    container: fedora:44
+
+    env:
+      CC: gcc
+      CXX: g++
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build tools
+        run: dnf install -y gcc-c++ libasan libubsan cmake ninja-build git curl zip unzip tar nodejs sqlite-devel
+
+      - name: Check GCC version
+        run: |
+          g++ --version
+          g++ -dumpversion | grep -E "^(1[4-9]|[2-9][0-9])(\.|\$)" || { echo "ERROR: GCC 14+ required, found $(g++ -dumpversion)"; exit 1; }
+
+      - name: Restore vcpkg cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/vcpkg
+            build/vcpkg_installed
+            injamm-build/vcpkg_installed
+          key: ${{ runner.os }}-fedora-44-sanitizer-vcpkg-${{ hashFiles('vcpkg.json') }}
+          restore-keys: |
+            ${{ runner.os }}-fedora-44-sanitizer-vcpkg-
+
+      - name: Install vcpkg
+        run: |
+          if [ ! -d ~/vcpkg ]; then
+            git clone https://github.com/microsoft/vcpkg.git ~/vcpkg
+            ~/vcpkg/bootstrap-vcpkg.sh
+          fi
+
+      - name: Install injamm
+        run: |
+          git clone $INJAMM_REPO injamm
+          cd injamm
+          git fetch --depth 1 origin $INJAMM_REF
+          git checkout FETCH_HEAD
+          cd ..
+          cmake -B injamm-build -S injamm -G Ninja \
+            -DCMAKE_TOOLCHAIN_FILE=$HOME/vcpkg/scripts/buildsystems/vcpkg.cmake \
+            -DCMAKE_INSTALL_PREFIX=$HOME/injamm-install \
+            -DBUILD_TEST=OFF -DBUILD_EXAMPLE=OFF
+          cmake --build injamm-build
+          cmake --install injamm-build
+
+      - name: Configure with sanitizers
+        run: |
+          cmake -B build -S . -G Ninja \
+            -DCMAKE_TOOLCHAIN_FILE=$HOME/vcpkg/scripts/buildsystems/vcpkg.cmake \
+            -DCMAKE_PREFIX_PATH=$HOME/injamm-install \
+            -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer" \
+            -DENABLE_THREADED_DISPATCH=OFF
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Test
+        run: ctest --test-dir build -V
+
+  windows-msvc:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore vcpkg cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            C:\vcpkg
+            build\vcpkg_installed
+            injamm-build\vcpkg_installed
+          key: ${{ runner.os }}-msvc-vcpkg-${{ hashFiles('vcpkg.json') }}
+          restore-keys: |
+            ${{ runner.os }}-msvc-vcpkg-
+
+      - name: Setup vcpkg
+        run: |
+          if not exist C:\vcpkg (
+            git clone https://github.com/microsoft/vcpkg.git C:\vcpkg
+            call C:\vcpkg\bootstrap-vcpkg.bat -disableMetrics
+          )
+        shell: cmd
+
+      - name: Install injamm
+        run: |
+          git clone $env:INJAMM_REPO injamm
+          cd injamm
+          git fetch --depth 1 origin $env:INJAMM_REF
+          git checkout FETCH_HEAD
+          cd ..
+          cmake -B injamm-build -S injamm -DCMAKE_TOOLCHAIN_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake -DCMAKE_INSTALL_PREFIX=C:\injamm-install -DBUILD_TEST=OFF -DBUILD_EXAMPLE=OFF
+          cmake --build injamm-build --config Release
+          cmake --install injamm-build --config Release
+
+      - name: Configure
+        run: cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake -DCMAKE_PREFIX_PATH=C:\injamm-install
+
+      - name: Build
+        run: cmake --build build --config Release
+
+      - name: Test
+        run: ctest --test-dir build -V -C Release
+
+  windows-no-enum:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore vcpkg cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            C:\vcpkg
+            build-noenum\vcpkg_installed
+            injamm-build\vcpkg_installed
+          key: ${{ runner.os }}-msvc-noenum-vcpkg-${{ hashFiles('vcpkg.json') }}
+          restore-keys: |
+            ${{ runner.os }}-msvc-noenum-vcpkg-
+
+      - name: Setup vcpkg
+        run: |
+          if not exist C:\vcpkg (
+            git clone https://github.com/microsoft/vcpkg.git C:\vcpkg
+            call C:\vcpkg\bootstrap-vcpkg.bat -disableMetrics
+          )
+        shell: cmd
+
+      - name: Install injamm (ENABLE_ENUM=OFF)
+        run: |
+          git clone $env:INJAMM_REPO injamm
+          cd injamm
+          git fetch --depth 1 origin $env:INJAMM_REF
+          git checkout FETCH_HEAD
+          cd ..
+          cmake -B injamm-build -S injamm -DCMAKE_TOOLCHAIN_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake -DCMAKE_INSTALL_PREFIX=C:\injamm-install -DBUILD_TEST=OFF -DBUILD_EXAMPLE=OFF -DENABLE_ENUM=OFF
+          cmake --build injamm-build --config Release
+          cmake --install injamm-build --config Release
+
+      - name: Configure
+        run: cmake -B build-noenum -S . -DCMAKE_TOOLCHAIN_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake -DCMAKE_PREFIX_PATH=C:\injamm-install -DENABLE_ENUM=OFF
+
+      - name: Build
+        run: cmake --build build-noenum --config Release
+
+      - name: Test
+        run: ctest --test-dir build-noenum -V -C Release
+
+  linux-clang:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        # clang 22 : Fedora 44
+        # clang 21 : Fedora 43
+        # clang 20 : Fedora 42
+        # clang 19 : Fedora 41
+        fedora_version: ["44", "43", "42", "41"]
+
+    container: fedora:${{ matrix.fedora_version }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build tools
+        run: dnf install -y clang cmake ninja-build git curl zip unzip tar sqlite-devel
+
+      - name: Check Clang version
+        run: clang++ --version
+
+      - name: Restore vcpkg cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/vcpkg
+            build/vcpkg_installed
+            injamm-build/vcpkg_installed
+          key: ${{ runner.os }}-clang-${{ matrix.fedora_version }}-vcpkg-${{ hashFiles('vcpkg.json') }}
+          restore-keys: |
+            ${{ runner.os }}-clang-${{ matrix.fedora_version }}-vcpkg-
+
+      - name: Install vcpkg
+        run: |
+          if [ ! -d ~/vcpkg ]; then
+            git clone https://github.com/microsoft/vcpkg.git ~/vcpkg
+            ~/vcpkg/bootstrap-vcpkg.sh
+          fi
+
+      - name: Install injamm
+        run: |
+          git clone $INJAMM_REPO injamm
+          cd injamm
+          git fetch --depth 1 origin $INJAMM_REF
+          git checkout FETCH_HEAD
+          cd ..
+          cmake -B injamm-build -S injamm -G Ninja \
+            -DCMAKE_TOOLCHAIN_FILE=$HOME/vcpkg/scripts/buildsystems/vcpkg.cmake \
+            -DCMAKE_INSTALL_PREFIX=$HOME/injamm-install \
+            -DCMAKE_C_COMPILER=clang \
+            -DCMAKE_CXX_COMPILER=clang++ \
+            -DBUILD_TEST=OFF -DBUILD_EXAMPLE=OFF
+          cmake --build injamm-build
+          cmake --install injamm-build
+
+      - name: Configure
+        run: |
+          cmake -B build -S . -G Ninja \
+            -DCMAKE_TOOLCHAIN_FILE=$HOME/vcpkg/scripts/buildsystems/vcpkg.cmake \
+            -DCMAKE_PREFIX_PATH=$HOME/injamm-install \
+            -DCMAKE_C_COMPILER=clang \
+            -DCMAKE_CXX_COMPILER=clang++
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Test
+        run: ctest --test-dir build -V
+
+  clang-no-enum:
+    runs-on: ubuntu-latest
+    container: fedora:44
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build tools
+        run: dnf install -y clang cmake ninja-build git curl zip unzip tar sqlite-devel
+
+      - name: Check Clang version
+        run: clang++ --version
+
+      - name: Restore vcpkg cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/vcpkg
+            build-noenum/vcpkg_installed
+            injamm-build/vcpkg_installed
+          key: ${{ runner.os }}-clang-noenum-vcpkg-${{ hashFiles('vcpkg.json') }}
+          restore-keys: |
+            ${{ runner.os }}-clang-noenum-vcpkg-
+
+      - name: Install vcpkg
+        run: |
+          if [ ! -d ~/vcpkg ]; then
+            git clone https://github.com/microsoft/vcpkg.git ~/vcpkg
+            ~/vcpkg/bootstrap-vcpkg.sh
+          fi
+
+      - name: Install injamm (ENABLE_ENUM=OFF)
+        run: |
+          git clone $INJAMM_REPO injamm
+          cd injamm
+          git fetch --depth 1 origin $INJAMM_REF
+          git checkout FETCH_HEAD
+          cd ..
+          cmake -B injamm-build -S injamm -G Ninja \
+            -DCMAKE_TOOLCHAIN_FILE=$HOME/vcpkg/scripts/buildsystems/vcpkg.cmake \
+            -DCMAKE_INSTALL_PREFIX=$HOME/injamm-install \
+            -DCMAKE_C_COMPILER=clang \
+            -DCMAKE_CXX_COMPILER=clang++ \
+            -DBUILD_TEST=OFF -DBUILD_EXAMPLE=OFF \
+            -DENABLE_ENUM=OFF
+          cmake --build injamm-build
+          cmake --install injamm-build
+
+      - name: Configure (ENABLE_ENUM=OFF)
+        run: |
+          cmake -B build-noenum -S . -G Ninja \
+            -DCMAKE_TOOLCHAIN_FILE=$HOME/vcpkg/scripts/buildsystems/vcpkg.cmake \
+            -DCMAKE_PREFIX_PATH=$HOME/injamm-install \
+            -DCMAKE_C_COMPILER=clang \
+            -DCMAKE_CXX_COMPILER=clang++ \
+            -DENABLE_ENUM=OFF
+
+      - name: Build
+        run: cmake --build build-noenum
+
+      - name: Test
+        run: ctest --test-dir build-noenum -V
+
+  emscripten:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install emsdk
+        run: |
+          git clone https://github.com/emscripten-core/emsdk.git /opt/emsdk
+          /opt/emsdk/emsdk install latest
+          /opt/emsdk/emsdk activate latest
+      - name: Restore vcpkg cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/vcpkg
+            build/vcpkg_installed
+            injamm-build/vcpkg_installed
+          key: ${{ runner.os }}-emscripten-vcpkg-${{ hashFiles('vcpkg.json') }}
+          restore-keys: |
+            ${{ runner.os }}-emscripten-vcpkg-
+      - name: Install vcpkg
+        run: |
+          if [ ! -d ~/vcpkg ]; then
+            git clone https://github.com/microsoft/vcpkg.git ~/vcpkg
+            ~/vcpkg/bootstrap-vcpkg.sh
+          fi
+      - name: Install injamm
+        run: |
+          source /opt/emsdk/emsdk_env.sh
+          git clone $INJAMM_REPO injamm
+          cd injamm
+          git fetch --depth 1 origin $INJAMM_REF
+          git checkout FETCH_HEAD
+          cd ..
+          cmake -B injamm-build -S injamm -G Ninja \
+            -DCMAKE_TOOLCHAIN_FILE=$HOME/vcpkg/scripts/buildsystems/vcpkg.cmake \
+            -DVCPKG_TARGET_TRIPLET=wasm32-emscripten \
+            -DVCPKG_CHAINLOAD_TOOLCHAIN_FILE=$EMSDK/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake \
+            -DCMAKE_INSTALL_PREFIX=$HOME/injamm-install \
+            -DBUILD_TEST=OFF -DBUILD_EXAMPLE=OFF -DBUILD_FUZZ=OFF
+          cmake --build injamm-build
+          cmake --install injamm-build
+      - name: Configure
+        run: |
+          source /opt/emsdk/emsdk_env.sh
+          cmake -B build -S . -G Ninja \
+            -DCMAKE_TOOLCHAIN_FILE=$HOME/vcpkg/scripts/buildsystems/vcpkg.cmake \
+            -DVCPKG_TARGET_TRIPLET=wasm32-emscripten \
+            -DVCPKG_CHAINLOAD_TOOLCHAIN_FILE=$EMSDK/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake \
+            -DCMAKE_PREFIX_PATH=$HOME/injamm-install \
+            -DBUILD_EXAMPLE=OFF \
+            -DBUILD_FUZZ=OFF
+      - name: Build
+        run: |
+          source /opt/emsdk/emsdk_env.sh
+          cmake --build build
+      - name: Test
+        run: |
+          source /opt/emsdk/emsdk_env.sh
+          ctest --test-dir build -V
+
+  macos:
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build tools
+        run: brew install cmake ninja sqlite
+
+      - name: Check compiler version
+        run: clang++ --version
+
+      - name: Restore vcpkg cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/vcpkg
+            build/vcpkg_installed
+            injamm-build/vcpkg_installed
+          key: ${{ runner.os }}-vcpkg-${{ hashFiles('vcpkg.json') }}
+          restore-keys: |
+            ${{ runner.os }}-vcpkg-
+
+      - name: Install vcpkg
+        run: |
+          if [ ! -d ~/vcpkg ]; then
+            git clone https://github.com/microsoft/vcpkg.git ~/vcpkg
+            ~/vcpkg/bootstrap-vcpkg.sh
+          fi
+
+      - name: Install injamm
+        run: |
+          git clone $INJAMM_REPO injamm
+          cd injamm
+          git fetch --depth 1 origin $INJAMM_REF
+          git checkout FETCH_HEAD
+          cd ..
+          cmake -B injamm-build -S injamm -G Ninja \
+            -DCMAKE_TOOLCHAIN_FILE=$HOME/vcpkg/scripts/buildsystems/vcpkg.cmake \
+            -DCMAKE_INSTALL_PREFIX=$HOME/injamm-install \
+            -DBUILD_TEST=OFF -DBUILD_EXAMPLE=OFF
+          cmake --build injamm-build
+          cmake --install injamm-build
+
+      - name: Configure
+        run: cmake -B build -S . -G Ninja -DCMAKE_TOOLCHAIN_FILE=$HOME/vcpkg/scripts/buildsystems/vcpkg.cmake -DCMAKE_PREFIX_PATH=$HOME/injamm-install
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Test
+        run: ctest --test-dir build -V
+
+  macos-no-enum:
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build tools
+        run: brew install cmake ninja sqlite
+
+      - name: Check compiler version
+        run: clang++ --version
+
+      - name: Restore vcpkg cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/vcpkg
+            build-noenum/vcpkg_installed
+            injamm-build/vcpkg_installed
+          key: ${{ runner.os }}-noenum-vcpkg-${{ hashFiles('vcpkg.json') }}
+          restore-keys: |
+            ${{ runner.os }}-noenum-vcpkg-
+
+      - name: Install vcpkg
+        run: |
+          if [ ! -d ~/vcpkg ]; then
+            git clone https://github.com/microsoft/vcpkg.git ~/vcpkg
+            ~/vcpkg/bootstrap-vcpkg.sh
+          fi
+
+      - name: Install injamm (ENABLE_ENUM=OFF)
+        run: |
+          git clone $INJAMM_REPO injamm
+          cd injamm
+          git fetch --depth 1 origin $INJAMM_REF
+          git checkout FETCH_HEAD
+          cd ..
+          cmake -B injamm-build -S injamm -G Ninja \
+            -DCMAKE_TOOLCHAIN_FILE=$HOME/vcpkg/scripts/buildsystems/vcpkg.cmake \
+            -DCMAKE_INSTALL_PREFIX=$HOME/injamm-install \
+            -DBUILD_TEST=OFF -DBUILD_EXAMPLE=OFF \
+            -DENABLE_ENUM=OFF
+          cmake --build injamm-build
+          cmake --install injamm-build
+
+      - name: Configure (ENABLE_ENUM=OFF)
+        run: cmake -B build-noenum -S . -G Ninja -DCMAKE_TOOLCHAIN_FILE=$HOME/vcpkg/scripts/buildsystems/vcpkg.cmake -DCMAKE_PREFIX_PATH=$HOME/injamm-install -DENABLE_ENUM=OFF
+
+      - name: Build
+        run: cmake --build build-noenum
+
+      - name: Test
+        run: ctest --test-dir build-noenum -V
+
+  clang-sanitizer:
+    runs-on: ubuntu-latest
+    container: fedora:44
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build tools
+        run: dnf install -y clang compiler-rt cmake ninja-build git curl zip unzip tar sqlite-devel
+
+      - name: Check Clang version
+        run: clang++ --version
+
+      - name: Restore vcpkg cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/vcpkg
+            build/vcpkg_installed
+            injamm-build/vcpkg_installed
+          key: ${{ runner.os }}-clang-sanitizer-vcpkg-${{ hashFiles('vcpkg.json') }}
+          restore-keys: |
+            ${{ runner.os }}-clang-sanitizer-vcpkg-
+
+      - name: Install vcpkg
+        run: |
+          if [ ! -d ~/vcpkg ]; then
+            git clone https://github.com/microsoft/vcpkg.git ~/vcpkg
+            ~/vcpkg/bootstrap-vcpkg.sh
+          fi
+
+      - name: Install injamm
+        run: |
+          git clone $INJAMM_REPO injamm
+          cd injamm
+          git fetch --depth 1 origin $INJAMM_REF
+          git checkout FETCH_HEAD
+          cd ..
+          cmake -B injamm-build -S injamm -G Ninja \
+            -DCMAKE_TOOLCHAIN_FILE=$HOME/vcpkg/scripts/buildsystems/vcpkg.cmake \
+            -DCMAKE_INSTALL_PREFIX=$HOME/injamm-install \
+            -DCMAKE_C_COMPILER=clang \
+            -DCMAKE_CXX_COMPILER=clang++ \
+            -DBUILD_TEST=OFF -DBUILD_EXAMPLE=OFF
+          cmake --build injamm-build
+          cmake --install injamm-build
+
+      - name: Configure with sanitizers
+        run: |
+          cmake -B build -S . -G Ninja \
+            -DCMAKE_TOOLCHAIN_FILE=$HOME/vcpkg/scripts/buildsystems/vcpkg.cmake \
+            -DCMAKE_PREFIX_PATH=$HOME/injamm-install \
+            -DCMAKE_C_COMPILER=clang \
+            -DCMAKE_CXX_COMPILER=clang++ \
+            -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer" \
+            -DENABLE_THREADED_DISPATCH=OFF
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Test
+        run: ctest --test-dir build -V
+
