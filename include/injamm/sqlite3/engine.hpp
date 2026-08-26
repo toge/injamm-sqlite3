@@ -28,7 +28,7 @@ public:
     return detail::bc_execute(bc_, value);
   }
 
-  // 値をレンダリングし、既存の文字列 out に追記する
+  // 値をレンダリングし、out をクリアした上で結果文字列を書き込む（本体 bc_execute_into の仕様）
   [[nodiscard]] std::expected<void, injamm::error_ctx> render(T const& value, std::string& out) const {
     return detail::bc_execute_into(bc_, value, out);
   }
