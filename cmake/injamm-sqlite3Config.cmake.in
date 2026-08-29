@@ -1,6 +1,9 @@
 @PACKAGE_INIT@
 
 include(CMakeFindDependencyMacro)
+# injamm が AppleClang で USE_FMT=ON の場合、fmt::fmt が必要だが
+# injammConfig.cmake が自前で find_dependency(fmt) しないため、ここで先に解決する。
+find_dependency(fmt CONFIG QUIET)
 find_dependency(injamm CONFIG REQUIRED)
 find_dependency(unofficial-sqlite3 CONFIG REQUIRED)
 

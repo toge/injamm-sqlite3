@@ -187,5 +187,128 @@ TEST_CASE("sqlite3 adapter", "[sqlite3]") {
 
     sqlite3_finalize(stmt);
   }
+
+  // TEXT 列に保存された数値でも数値比較が行われる（本体側の数値評価対応）
+  SECTION("numeric comparison with text-stored value") {
+    test_db db;
+    sqlite3_exec(db.db, "CREATE TABLE ages (age TEXT)", nullptr, nullptr, nullptr);
+    sqlite3_exec(db.db, "INSERT INTO ages VALUES ('20'), ('17')", nullptr, nullptr, nullptr);
+
+    sqlite3_stmt* stmt = prepare(db, "SELECT age FROM ages WHERE age = '20'");
+    REQUIRE(sqlite3_step(stmt) == SQLITE_ROW);
+
+    auto row    = injamm::sqlite3::sqlite3_row_view{stmt};
+    auto eng    = injamm::sqlite3::runtime_engine<injamm::sqlite3::sqlite3_row_view>("{{#if age > 18}}GT{{else}}LE{{/if}}");
+    auto result = eng.render(row);
+    REQUIRE(result.has_value());
+    CHECK(*result == "GT");
+    sqlite3_finalize(stmt);
+
+    stmt = prepare(db, "SELECT age FROM ages WHERE age = '17'");
+    REQUIRE(sqlite3_step(stmt) == SQLITE_ROW);
+    auto row2    = injamm::sqlite3::sqlite3_row_view{stmt};
+    auto result2 = injamm::sqlite3::runtime_engine<injamm::sqlite3::sqlite3_row_view>("{{#if age > 18}}GT{{else}}LE{{/if}}").render(row2);
+    REQUIRE(result2.has_value());
+    CHECK(*result2 == "LE");
+    sqlite3_finalize(stmt);
+  }
+
+  // FLOAT 列: to_chars による小数レンダリング
+  SECTION("float column rendering") {
+    test_db       db;
+    sqlite3_stmt* stmt = prepare(db, "SELECT CAST(2.5 AS REAL) AS ratio");
+    REQUIRE(sqlite3_step(stmt) == SQLITE_ROW);
+
+    auto row    = injamm::sqlite3::sqlite3_row_view{stmt};
+    auto eng    = injamm::sqlite3::runtime_engine<injamm::sqlite3::sqlite3_row_view>("x={{ratio}}");
+    auto result = eng.render(row);
+    REQUIRE(result.has_value());
+    CHECK(*result == "x=2.5");
+
+    sqlite3_finalize(stmt);
+  }
+
+  // render(value, out): out をクリアして書き込む（本体 bc_execute_into の仕様）
+  SECTION("render writes into provided string") {
+    test_db       db;
+    sqlite3_stmt* stmt = prepare(db, "SELECT name FROM users WHERE id = 1");
+    REQUIRE(sqlite3_step(stmt) == SQLITE_ROW);
+
+    auto        row    = injamm::sqlite3::sqlite3_row_view{stmt};
+    auto        eng    = injamm::sqlite3::runtime_engine<injamm::sqlite3::sqlite3_row_view>("{{name}}!");
+    std::string out    = "[";
+    auto        result = eng.render(row, out);
+    REQUIRE(result.has_value());
+    CHECK(out == "Alice!");
+
+    sqlite3_finalize(stmt);
+  }
+
+  // 反転セクション {{^var}}: 値が空のときだけ描画される
+  SECTION("inverted section") {
+    test_db       db;
+    sqlite3_stmt* stmt = prepare(db, "SELECT name FROM users WHERE id = 1");
+    REQUIRE(sqlite3_step(stmt) == SQLITE_ROW);
+
+    auto row = injamm::sqlite3::sqlite3_row_view{stmt};
+
+    auto eng_empty    = injamm::sqlite3::runtime_engine<injamm::sqlite3::sqlite3_row_view>("{{^missing}}N{{/missing}}");
+    auto empty_result = eng_empty.render(row);
+    REQUIRE(empty_result.has_value());
+    CHECK(*empty_result == "N");
+
+    auto eng_nonempty    = injamm::sqlite3::runtime_engine<injamm::sqlite3::sqlite3_row_view>("{{^name}}N{{/name}}");
+    auto nonempty_result = eng_nonempty.render(row);
+    REQUIRE(nonempty_result.has_value());
+    CHECK(*nonempty_result == "");
+
+    sqlite3_finalize(stmt);
+  }
+
+  // loop.is_first: 先頭行でのみ真
+  SECTION("loop.is_first") {
+    test_db       db;
+    sqlite3_stmt* stmt       = prepare(db, "SELECT id FROM users ORDER BY id");
+    auto          result_set = injamm::sqlite3::sqlite3_result{stmt};
+
+    auto eng    = injamm::sqlite3::runtime_engine<injamm::sqlite3::sqlite3_result>("{{#.}}{{#if loop.is_first}}F{{/if}}{{/.}}");
+    auto result = eng.render(result_set);
+    REQUIRE(result.has_value());
+    CHECK(*result == "F");
+
+    sqlite3_finalize(stmt);
+  }
+
+  // trim_blocks / lstrip_blocks オプション: タグ前後の空白・改行が除去される
+  SECTION("trim_blocks and lstrip_blocks options") {
+    test_db       db;
+    sqlite3_stmt* stmt       = prepare(db, "SELECT name FROM users ORDER BY id");
+    auto          result_set = injamm::sqlite3::sqlite3_result{stmt};
+
+    // trim_blocks: タグ直後の改行を除去 / lstrip_blocks: ブロックタグ前の行頭空白を除去
+    auto eng    = injamm::sqlite3::runtime_engine<injamm::sqlite3::sqlite3_result>("A\n  {{#.}}{{name}}{{/.}}\nB", true, true);
+    auto result = eng.render(result_set);
+    REQUIRE(result.has_value());
+    CHECK(*result == "A\nAliceBobB");
+
+    sqlite3_finalize(stmt);
+  }
+
+  // 文字列の不等値比較: status != "Pending"
+  SECTION("text inequality works in if") {
+    test_db db;
+    sqlite3_exec(db.db, "CREATE TABLE orders (status TEXT)", nullptr, nullptr, nullptr);
+    sqlite3_exec(db.db, "INSERT INTO orders VALUES ('Pending'), ('Shipped')", nullptr, nullptr, nullptr);
+
+    sqlite3_stmt* stmt       = prepare(db, "SELECT status FROM orders");
+    auto          result_set = injamm::sqlite3::sqlite3_result{stmt};
+
+    auto eng    = injamm::sqlite3::runtime_engine<injamm::sqlite3::sqlite3_result>("{{#.}}{{#if status != \"Pending\"}}{{status}}{{/if}}{{/.}}");
+    auto result = eng.render(result_set);
+    REQUIRE(result.has_value());
+    CHECK(*result == "Shipped");
+
+    sqlite3_finalize(stmt);
+  }
 }
 
