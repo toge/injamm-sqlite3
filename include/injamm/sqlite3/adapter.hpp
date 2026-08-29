@@ -22,6 +22,7 @@ struct sqlite3_row_view {
   // INTEGER/FLOAT を文字列化する際の作業バッファ（行ごとに独立）
   mutable char num_buf_[64] = {};
 
+  sqlite3_row_view() = default;
   explicit sqlite3_row_view(sqlite3_stmt* stmt) : stmt_(stmt) {}
   explicit sqlite3_row_view(sqlite3_stmt* stmt, std::vector<std::string_view> const* shared)
       : stmt_(stmt), shared_names_(shared) {}
