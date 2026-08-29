@@ -126,3 +126,54 @@ injamm-sqlite3
 ### ディスパッチ
 
 GCC では core と共通の computed-goto (threaded) dispatch が自動有効になります(`INJAMM_NO_THREADED_DISPATCH` を自分で定義すれば無効化可能)。`tests/bench_dispatch.cpp` に計測用ベンチマークがあります。
+
+## ベンチマーク
+
+`injamm`（コンテナ経由）と `injamm-sqlite3`（直接）の比較を Catch2 の `BENCHMARK` 機能で計測します。`template-benchmark` の HTML/CSV/フィルタ等の複数パターンを参考に、SQLite の結果セットを「一度 `vector` に詰め替えて描画」と「直接描画」で比較します。
+
+### 実行方法
+
+```sh
+cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE=~/vm/vcpkg/scripts/buildsystems/vcpkg.cmake -DCMAKE_PREFIX_PATH=$HOME/.local/injamm
+cmake --build build --parallel
+ctest -R bench_vs -V        # または ./build/tests/injamm-sqlite3_bench_vs
+# Catch2 オプション: --benchmark-samples 100 --benchmark-warmup-time 100
+```
+
+`tests/bench_sqlite_vs.cpp` に 4パターン×3サイズ（10/100/1000行）を実装し、各ケースで `container` vs `direct` のペアを `BENCHMARK` で計測します。出力が一致することは `TEST_CASE("sqlite vs container - output equality")` で検証しています。
+
+- **HTMLテーブル**: `<table>{{#users}}<tr><td>{{name}}</td><td>{{email}}</td><td>{{age}}</td></tr>{{/users}}</table>`
+- **CSV**: `name,email,age\n{{#users}}{{name}},{{email}},{{age}}\n{{/users}}`
+- **フィルタ+条件分岐+loop.index**: `<ul>{{#users}}<li>{{name | upper}} <{{email}}>{{#if status == "active"}}*{{/if}}{{loop.index1}}</li>{{/users}}</ul>`
+- **単一行**: `{{name}} <{{email}}> ({{age}}) [{{status}}]`（`sqlite3_row_view` vs `struct`）
+
+### 結果（Release, GCC 16, x64 Linux, Catch2 100 samples）
+
+最適化前（`find()` が毎回 `sqlite3_column_name` 線形探索 + `std::string` ヒープ確保）と最適化後（列名キャッシュ + `string_view` ゼロコピー）の比較です。
+
+| パターン | 行数 | container mean | direct mean（最適化前） | direct mean（最適化後） | 改善後 direct/container |
+|---|---|---|---|---|---|
+| html | 10 | 13.5 µs | 13.5 µs | 13.5 µs | 1.00× |
+| html | 100 | 119 µs | 157 µs | 118 µs | 0.99× |
+| html | 1000 | 1.13 ms | 1.47 ms | 1.31 ms | 1.16× |
+| csv | 10 | 14.2 µs | 17.3 µs | 14.2 µs | 1.00× |
+| csv | 100 | 112 µs | 148 µs | 121 µs | 1.08× |
+| csv | 1000 | 1.28 ms | 1.58 ms | 1.18 ms | 0.92× |
+| filter | 10 | 13.2 µs | 18.6 µs | 16.0 µs | 1.21× |
+| filter | 100 | 116 µs | 168 µs | 140 µs | 1.20× |
+| filter | 1000 | 1.13 ms | 1.68 ms | 1.28 ms | 1.13× |
+| single | 1 | 2.67 µs | 3.63 µs | 3.11 µs | 1.16× |
+
+> 最適化により全パターンで 1.3〜1.5倍遅 → 1.1倍以内（多くは±10%）まで改善。`csv 1000` では直接が逆転しています。残る 10〜20% は `find()` の線形探索（4列で4回 `string_view` 比較/行）vs コンテナの `field_index` によるジャンプテーブル差で、テンプレート内の変数名を事前に列インデックスへ解決する `field_index` ヒントの活用でさらに解消可能です（今後の課題）。
+
+### injamm-sqlite3 の有利な点
+
+速度が同等になった現在、直接レンダリングの価値は速度以外にあります。
+
+| 観点 | container（`injamm`） | direct（`injamm-sqlite3`） |
+|---|---|---|
+| **コード量** | `struct BenchRow` + `glz::meta` + `fetch` ループ（`bench_sqlite_vs.cpp:16,208`）がクエリ毎に必要 | `runtime_engine<sqlite3_result>(kHtmlDirect)` の1行。列名がそのまま `{{name}}` に対応 |
+| **メモリ** | `vector<Row>` に全行を保持（1000行で数十KB、並行リクエストで増大） | `sqlite3_result` が1行ずつ `sqlite3_step` し `out.append` するストリーム。同時保持は1行分のみで O(1) |
+| **柔軟性** | `SELECT *` など動的列は struct を再定義・再コンパイルが必要 | 任意の列をテンプレート側で `{{extra_col}}` と書くだけで対応。スキーマ変更時に C++ 側の修正が不要 |
+
+> 10行固定の小規模クエリのみで速度だけを見るならコンテナでも十分ですが、100行以上のリスト、動的列、多数のエンドポイントを持つ Web アプリでは、上記3点が開発・運用コストを明確に下げます。ベンチマークは `tests/bench_sqlite_vs.cpp` で再現可能です。
