@@ -65,4 +65,11 @@ if(NOT EMSCRIPTEN)
   # Dispatch benchmark (manual run, not registered with ctest)
   add_executable(injamm-sqlite3_bench bench_dispatch.cpp)
   target_link_libraries(injamm-sqlite3_bench PRIVATE injamm-sqlite3 SQLite3::SQLite3)
+
+  # Container vs direct comparison benchmark (Catch2 BENCHMARK)
+  add_executable(injamm-sqlite3_bench_vs bench_sqlite_vs.cpp)
+  target_link_libraries(injamm-sqlite3_bench_vs PRIVATE injamm-sqlite3 Catch2::Catch2WithMain SQLite3::SQLite3)
+  # Bench binary is run manually: ./injamm-sqlite3_bench_vs  or  ctest -R bench_vs -V
+  catch_discover_tests(injamm-sqlite3_bench_vs)
+  add_test(NAME injamm-sqlite3_bench_vs COMMAND injamm-sqlite3_bench_vs)
 endif()
