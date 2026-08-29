@@ -2,7 +2,6 @@
 #include <catch2/benchmark/catch_benchmark.hpp>
 
 #include <glaze/glaze.hpp>
-#include <injamm/detail/nttp_data.hpp>
 #include <injamm/engine.hpp>
 #include <injamm/sqlite3/adapter.hpp>
 #include <injamm/sqlite3/engine.hpp>
