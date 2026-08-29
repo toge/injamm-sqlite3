@@ -310,5 +310,70 @@ TEST_CASE("sqlite3 adapter", "[sqlite3]") {
 
     sqlite3_finalize(stmt);
   }
+
+  // loop.is_even / loop.is_odd: 偶奇で交互に描画 (2026-08-22 追加)
+  SECTION("loop.is_even and loop.is_odd") {
+    test_db       db;
+    sqlite3_stmt* stmt = prepare(db, "SELECT name FROM users ORDER BY id");
+    auto          result_set = injamm::sqlite3::sqlite3_result{stmt};
+    auto eng = injamm::sqlite3::runtime_engine<injamm::sqlite3::sqlite3_result>("{{#.}}{{loop.is_even}}|{{/.}}");
+    auto result = eng.render(result_set);
+    REQUIRE(result.has_value());
+    CHECK(*result == "true|false|");
+    sqlite3_finalize(stmt);
+
+    stmt = prepare(db, "SELECT name FROM users ORDER BY id");
+    auto rs2 = injamm::sqlite3::sqlite3_result{stmt};
+    auto eng2 = injamm::sqlite3::runtime_engine<injamm::sqlite3::sqlite3_result>(
+        "{{#.}}{{#loop.is_even}}E{{/loop.is_even}}{{^loop.is_even}}O{{/loop.is_even}}|{{/.}}");
+    auto r2 = eng2.render(rs2);
+    REQUIRE(r2.has_value());
+    CHECK(*r2 == "E|O|");
+    sqlite3_finalize(stmt);
+  }
+
+  // urlencode フィルタ (2026-08-22 追加)
+  SECTION("urlencode filter on sqlite value") {
+    test_db db;
+    sqlite3_exec(db.db, "CREATE TABLE q (v TEXT)", nullptr, nullptr, nullptr);
+    sqlite3_exec(db.db, "INSERT INTO q VALUES ('a b+c')", nullptr, nullptr, nullptr);
+    sqlite3_stmt* stmt = prepare(db, "SELECT v FROM q");
+    REQUIRE(sqlite3_step(stmt) == SQLITE_ROW);
+    auto row = injamm::sqlite3::sqlite3_row_view{stmt};
+    auto eng = injamm::sqlite3::runtime_engine<injamm::sqlite3::sqlite3_row_view>("{{v | urlencode}}");
+    auto result = eng.render(row);
+    REQUIRE(result.has_value());
+    CHECK(*result == "a%20b%2Bc");
+    sqlite3_finalize(stmt);
+  }
+
+  // ConstMap による @var 展開 (本体 engine parity) — @var はフィールド名の別名
+  SECTION("ConstMap @var expansion") {
+    test_db       db;
+    sqlite3_stmt* stmt = prepare(db, "SELECT name FROM users WHERE id = 1");
+    REQUIRE(sqlite3_step(stmt) == SQLITE_ROW);
+    auto row = injamm::sqlite3::sqlite3_row_view{stmt};
+    std::map<std::string, std::string> consts{{"field", "name"}};
+    auto eng = injamm::sqlite3::runtime_engine<injamm::sqlite3::sqlite3_row_view>("Hello {{@var(field)}}!", consts);
+    auto result = eng.render(row);
+    REQUIRE(result.has_value());
+    CHECK(*result == "Hello Alice!");
+    sqlite3_finalize(stmt);
+  }
+
+  // partials レジストリ ({{> name}}) — 本体 engine parity
+  SECTION("partials") {
+    test_db       db;
+    sqlite3_stmt* stmt = prepare(db, "SELECT name FROM users WHERE id = 1");
+    REQUIRE(sqlite3_step(stmt) == SQLITE_ROW);
+    auto row = injamm::sqlite3::sqlite3_row_view{stmt};
+    // 本体 engine と同様の partials コンストラクタがコンパイル・動作することを確認
+    auto eng = injamm::sqlite3::runtime_engine<injamm::sqlite3::sqlite3_row_view>(
+        "Hi {{name}}", std::vector<injamm::detail::partial_entry>{});
+    auto result = eng.render(row);
+    REQUIRE(result.has_value());
+    CHECK(*result == "Hi Alice");
+    sqlite3_finalize(stmt);
+  }
 }
 

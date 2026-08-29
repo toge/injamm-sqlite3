@@ -97,9 +97,12 @@ auto html = eng.render(rows);
 | `{{loop.index}}` / `{{loop.index1}}` | ✅ | カウンタ |
 | `{{loop.is_first}}` | ✅ | `index == 0` |
 | `{{loop.is_last}}` | ❌ | 前方カーソルでは判定不可 |
+| `{{loop.is_even}}` / `{{loop.is_odd}}` | ✅ | `index % 2` による偶奇判定（`{{#loop.is_even}}` / `{{^loop.is_odd}}` 等も対応、2026-08-22 追加） |
 | `{{loop.size}}` | ❌ | 事前カウントなし |
 | `{{#if age > 18}}` | ✅ | 整数として解釈できる文字列は数値比較（本体側で対応） |
 | 整数フィルタ (`hex`, `zerofill` 等) | ✅ | 実行時に文字列→整数変換して適用 |
+| 文字列フィルタ `urlencode` / `strip` 等 | ✅ | 本体の `filters.hpp` に委譲（`urlencode` は 2026-08-22 追加） |
+| セクションフィルタ `join` / `sort` | ❌ | 前方カーソルでは `size()` を持たないためストリーミング不可。`join` は `string::join` 等で代替、`sort` は 2026-08-29 に本体側で削除され事前ソートに移行 |
 | 入れ子パス `{{addr.city}}` | ❌ | 実行時型はリフレクション不可能 |
 
 ## 設計
@@ -109,13 +112,15 @@ auto html = eng.render(rows);
 ```
 injamm (別リポジトリ)
   └── bytecode_exec.hpp   runtime dispatch 分岐 (concept 2種) を内包、
-                          実行時文字列値の数値比較 ({{#if age > 18}}) に対応
+                          実行時文字列値の数値比較 ({{#if age > 18}})・
+                          loop.is_even/is_odd・urlencode 等のフィルタに対応
 
 injamm-sqlite3
   ├── concept.hpp        injamm::detail の concept 再エクスポート
   ├── executor.hpp       bytecode_exec.hpp への名前空間エイリアスシム
-  ├── engine.hpp         runtime_engine<T> (bc_compile / bc_execute を利用)
-  └── adapter.hpp        sqlite3_row_view, sqlite3_result
+  ├── engine.hpp         runtime_engine<T> (bc_compile / bc_execute を利用、
+  │                      ConstMap / partials コンストラクタを含む)
+  └── adapter.hpp        sqlite3_row_view, sqlite3_result (string_view ゼロコピー)
 ```
 
 ### 名前空間

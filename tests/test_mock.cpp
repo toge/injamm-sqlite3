@@ -190,4 +190,37 @@ TEST_CASE("forward iteration rendering", "[engine][iteration]") {
     REQUIRE(result.has_value());
     CHECK(*result == "A");
   }
+
+  // loop.is_even / loop.is_odd: 偶奇で交互に true/false (2026-08-22 追加)
+  SECTION("loop.is_even and loop.is_odd") {
+    mock_row    rows_arr[4] = {mock_row{{{"name", "a"}}}, mock_row{{{"name", "b"}}}, mock_row{{{"name", "c"}}},
+                               mock_row{{{"name", "d"}}}};
+    mock_result res{rows_arr, 4};
+    auto        eng = injamm::sqlite3::runtime_engine<mock_result>("{{#.}}{{loop.is_even}}|{{/.}}");
+    auto        result = eng.render(res);
+    REQUIRE(result.has_value());
+    CHECK(*result == "true|false|true|false|");
+    auto eng2 = injamm::sqlite3::runtime_engine<mock_result>("{{#.}}{{#loop.is_even}}E{{/loop.is_even}}{{^loop.is_even}}O{{/loop.is_even}}|{{/.}}");
+    auto r2 = eng2.render(res);
+    REQUIRE(r2.has_value());
+    CHECK(*r2 == "E|O|E|O|");
+  }
+
+  // urlencode フィルタ: スペース等が percent エンコードされる (2026-08-22 追加)
+  SECTION("urlencode filter") {
+    mock_row r{{{"q", "a b+c"}}};
+    auto     eng    = injamm::sqlite3::runtime_engine<mock_row>("{{q | urlencode}}");
+    auto     result = eng.render(r);
+    REQUIRE(result.has_value());
+    CHECK(*result == "a%20b%2Bc");
+  }
+
+  // strip は trim の別名
+  SECTION("strip filter alias") {
+    mock_row r{{{"v", "  hi  "}}};
+    auto     eng    = injamm::sqlite3::runtime_engine<mock_row>("{{v | strip}}");
+    auto     result = eng.render(r);
+    REQUIRE(result.has_value());
+    CHECK(*result == "hi");
+  }
 }
