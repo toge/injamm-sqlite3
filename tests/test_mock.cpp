@@ -53,18 +53,13 @@ TEST_CASE("concepts satisfy", "[concept]") {
 }
 
 #include <injamm/sqlite3/engine.hpp>
-
-#include <cstdio>
-
 TEST_CASE("mock rendering", "[engine]") {
   // 単一行・単一変数の展開
   SECTION("single row, single var") {
     mock_row r{{{"name", "Alice"}, {"email", "alice@example.com"}}};
-    fprintf(stderr, "DEBUG: find(name)='%s'\n", r.find("name").c_str());
     auto     eng    = injamm::sqlite3::runtime_engine<mock_row>("Hello {{name}} ({{email}})");
     auto     result = eng.render(r);
     REQUIRE(result.has_value());
-    fprintf(stderr, "DEBUG: result='%s'\n", result->c_str());
     CHECK(*result == "Hello Alice (alice@example.com)");
   }
 

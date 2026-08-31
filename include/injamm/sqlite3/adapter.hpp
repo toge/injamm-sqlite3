@@ -2,6 +2,7 @@
 
 #include <injamm/sqlite3/concept.hpp>
 #include <sqlite3.h>
+#include <cassert>
 #include <charconv>
 #include <string>
 #include <string_view>
@@ -140,13 +141,13 @@ struct sqlite3_result {
   };
 
   iterator begin() const {
-    if (!started_) {
-      started_ = true;
-      auto* names = col_names_ptr();
-      int rc = sqlite3_step(stmt_);
-      return iterator{stmt_, rc, sqlite3_row_view{stmt_, names}, names};
-    }
-    return iterator{nullptr, SQLITE_DONE, sqlite3_row_view{nullptr}, nullptr};
+    // sqlite3_result は前方専用カーソルのため begin() は 1 回しか呼べない。
+    // 2 回目の呼び出しは使用側の誤りであるため、デバッグビルドでトラップする。
+    assert(!started_ && "sqlite3_result::begin() called twice; forward-only cursor cannot be rewound");
+    started_ = true;
+    auto* names = col_names_ptr();
+    int rc = sqlite3_step(stmt_);
+    return iterator{stmt_, rc, sqlite3_row_view{stmt_, names}, names};
   }
   sentinel end() const { return {}; }
 };
