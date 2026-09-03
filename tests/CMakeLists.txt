@@ -1,3 +1,22 @@
+# ---- WASI (wasip1) スモークテスト ----
+# Catch2 が wasip1 でビルド不可 (signal 未対応) のため、
+# 親 injamm の test_wasi_minimal と同様に Catch2 非依存のスモークテストにする。
+# sqlite3 は injamm-sqlite3 が内包する amalgamation を使う。
+# 常時ビルド可能 (hosted 依存なし) なので先に定義する。
+if(CMAKE_SYSTEM_NAME STREQUAL "WASI")
+  add_executable(injamm-sqlite3_test_wasi test_wasi_sqlite3.cpp)
+  target_link_libraries(injamm-sqlite3_test_wasi PRIVATE injamm-sqlite3)
+  # wasm バイナリは直接実行できないため、wasmedge 経由で実行する
+  find_program(WASMEDGE_EXECUTABLE wasmedge)
+  if(WASMEDGE_EXECUTABLE)
+    add_test(NAME injamm-sqlite3_test_wasi COMMAND ${WASMEDGE_EXECUTABLE} injamm-sqlite3_test_wasi)
+  else()
+    message(STATUS "wasmedge not found: injamm-sqlite3_test_wasi will not run under ctest (run manually: wasmedge ./injamm-sqlite3_test_wasi)")
+  endif()
+  # WASI ビルドでは hosted なテスト/ベンチはスキップ
+  return()
+endif()
+
 # ---- Catch2 (Emscripten では amalgamated 版を再コンパイル) ----
 if(EMSCRIPTEN)
   # Emscripten: vcpkg がインストールした Catch2 静的ライブラリは

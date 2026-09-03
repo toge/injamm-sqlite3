@@ -49,6 +49,47 @@ ctest --test-dir build
 
 CMake オプション: `BUILD_TEST`(デフォルト ON)。
 
+## WASI (wasip1) ビルド
+
+vcpkg の sqlite3 ポートは wasip1 でビルド失敗する
+(os_unix の `UNIX_SHM_*` が未定義になる) ため、WASI に限って
+sqlite3 アマルガメーション (`sqlite3.c`) を単一ファイルコンパイルする。
+Catch2 も wasip1 でビルド不可 (signal 未対応) のため、
+WASI テストは Catch2 非依存のスモークテスト (`tests/test_wasi_sqlite3.cpp`) になる。
+enchantum は injamm 本体と同様に WASI でも有効のまま使う。
+
+```sh
+# 1) injamm 本体を wasip1 向けにビルド & インストール
+cmake -B /tmp/injamm-wasi-b -S ~/src/injamm -G Ninja \
+  -DCMAKE_TOOLCHAIN_FILE=~/vm/vcpkg/scripts/buildsystems/vcpkg.cmake \
+  -DVCPKG_TARGET_TRIPLET=wasm32-wasip1 \
+  -DVCPKG_OVERLAY_TRIPLETS=$PWD/triplets \
+  -DVCPKG_CHAINLOAD_TOOLCHAIN_FILE=~/vm/wasi-sdk/share/cmake/wasi-sdk-p1.cmake \
+  -DCMAKE_INSTALL_PREFIX=$HOME/.local/injamm-wasi \
+  -DBUILD_TEST=OFF -DBUILD_EXAMPLE=OFF \
+  -DENABLE_WASI_MINIMAL=ON
+cmake --build /tmp/injamm-wasi-b
+cmake --install /tmp/injamm-wasi-b
+
+# 2) 本ライブラリ (sqlite アマルガメーションは自動取得)
+cmake -B build-wasi -S . -G Ninja \
+  -DCMAKE_TOOLCHAIN_FILE=~/vm/vcpkg/scripts/buildsystems/vcpkg.cmake \
+  -DVCPKG_TARGET_TRIPLET=wasm32-wasip1 \
+  -DVCPKG_OVERLAY_TRIPLETS=$PWD/triplets \
+  -DVCPKG_CHAINLOAD_TOOLCHAIN_FILE=~/vm/wasi-sdk/share/cmake/wasi-sdk-p1.cmake \
+  -DCMAKE_PREFIX_PATH=$HOME/.local/injamm-wasi \
+  -Dinjamm_DIR=$HOME/.local/injamm-wasi/lib/cmake/injamm \
+  -DINJAMM_SQLITE3_FETCH_AMALGAMATION=ON
+cmake --build build-wasi
+ctest --test-dir build-wasi -V   # wasmedge 経由で .wasm を実行
+```
+
+CMake オプション: `INJAMM_SQLITE3_FETCH_AMALGAMATION`(sqlite アマルガメーションを
+FetchContent で自動取得、デフォルト OFF)、`SQLITE3_AMALGAMATION_DIR`
+(手元のアマルガメーション展開ディレクトリを指定)、
+`SQLITE3_AMALGAMATION_VERSION` / `SQLITE3_AMALGAMATION_SHA256`
+(取得するバージョンとハッシュ、デフォルト 3.53.4)。
+
 ## 使い方
 
 ### 単一行

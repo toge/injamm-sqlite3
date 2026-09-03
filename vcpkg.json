@@ -6,8 +6,14 @@
       "name": "fmt",
       "platform": "osx | linux"
     },
-    "catch2",
-    "sqlite3",
+    {
+      "name": "catch2",
+      "platform": "emscripten | !wasm32"
+    },
+    {
+      "name": "sqlite3",
+      "platform": "!wasm32"
+    },
     "enchantum"
   ],
   "overrides": [
