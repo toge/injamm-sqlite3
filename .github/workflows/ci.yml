@@ -591,7 +591,7 @@ jobs:
           /opt/wasi-sdk/bin/clang++ --version
       - name: Install wasmedge
         run: |
-          curl -sSf --max-time 300 https://raw.githubusercontent.com/WasmEdge/WasmEdge/master/utils/install_v2.sh | bash -s -- --version 0.17.1
+          curl -sSf --max-time 300 https://raw.githubusercontent.com/WasmEdge/WasmEdge/master/utils/install_v2.sh | bash -s -- --version=0.17.1
           echo "$HOME/.wasmedge/bin" >> $GITHUB_PATH
       - name: Install build tools
         run: sudo apt-get update && sudo apt-get install -y cmake ninja-build git curl zip unzip tar

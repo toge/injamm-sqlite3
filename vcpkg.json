@@ -12,7 +12,7 @@
     },
     {
       "name": "sqlite3",
-      "platform": "!wasm32"
+      "platform": "emscripten | !wasm32"
     },
     "enchantum"
   ],
