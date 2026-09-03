@@ -26,7 +26,7 @@ eng.render(sqlite3_row_view{stmt});
 - [injamm](https://github.com/toge/injamm) 本体 (`find_package(injamm CONFIG REQUIRED)` で解決。事前にビルド&インストールが必要)
 - unofficial-sqlite3 (vcpkg port、テスト実行時は加えてシステムの libsqlite3)
 
-テスト済み injamm リビジョン: `5c03da4` (拡張は `injamm::detail::` の concept 2種と `bc_compile` / `bc_execute(_into)` に依存するため、本体更新時は要確認)
+テスト済み injamm リビジョン: `0c459ea` (拡張は `injamm::detail::` の concept 2種と `bc_compile` / `bc_execute(_into)` に依存するため、本体更新時は要確認)
 
 ## ビルド
 

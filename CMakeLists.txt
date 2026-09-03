@@ -71,13 +71,17 @@ else()
     message(FATAL_ERROR "SQLITE3_AMALGAMATION_DIR does not contain sqlite3.c: ${SQLITE3_AMALGAMATION_DIR}")
   endif()
   add_library(injamm_sqlite3_amalgamation STATIC "${SQLITE3_AMALGAMATION_DIR}/sqlite3.c")
-  target_include_directories(injamm_sqlite3_amalgamation PUBLIC "${SQLITE3_AMALGAMATION_DIR}")
+  # FetchContent 取得時はソースがビルドディレクトリ配下になるため、
+  # ビルド時パスの漏洩を避けて BUILD/INSTALL を分離する。
+  target_include_directories(injamm_sqlite3_amalgamation PUBLIC
+    "$<BUILD_INTERFACE:${SQLITE3_AMALGAMATION_DIR}>"
+    "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/injamm-sqlite3-amalgamation>"
+  )
   target_compile_definitions(injamm_sqlite3_amalgamation PUBLIC
     SQLITE_THREADSAFE=0
     SQLITE_OMIT_LOAD_EXTENSION
   )
   target_link_libraries(injamm-sqlite3 INTERFACE injamm::injamm injamm_sqlite3_amalgamation)
-  target_include_directories(injamm-sqlite3 INTERFACE "${SQLITE3_AMALGAMATION_DIR}")
 endif()
 
 # ---- Install ----
@@ -98,6 +102,10 @@ if(NOT unofficial-sqlite3_FOUND)
   install(
     TARGETS injamm_sqlite3_amalgamation
     EXPORT injamm-sqlite3Targets
+  )
+  install(
+    FILES "${SQLITE3_AMALGAMATION_DIR}/sqlite3.h"
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/injamm-sqlite3-amalgamation
   )
 endif()
 
