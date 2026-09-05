@@ -617,9 +617,9 @@ jobs:
             ~/vcpkg/bootstrap-vcpkg.sh
           fi
 
-      - name: Install injamm via vcpkg (wasip1, -fno-exceptions)
+      - name: Install injamm via vcpkg (wasip1, -fno-rtti)
         run: |
-          export VCPKG_CMAKE_CONFIGURE_OPTIONS="-DCMAKE_CXX_FLAGS=-fno-exceptions -fno-rtti"
+          export VCPKG_CMAKE_CONFIGURE_OPTIONS="-DCMAKE_CXX_FLAGS=-fno-rtti"
           ~/vcpkg/vcpkg install \
             --triplet=wasm32-wasip1 \
             --overlay-triplets=$GITHUB_WORKSPACE/triplets \
@@ -680,9 +680,9 @@ jobs:
             ~/vcpkg/bootstrap-vcpkg.sh
           fi
 
-      - name: Install injamm via vcpkg (wasip2, -fno-exceptions)
+      - name: Install injamm via vcpkg (wasip2, -fno-rtti)
         run: |
-          export VCPKG_CMAKE_CONFIGURE_OPTIONS="-DCMAKE_CXX_FLAGS=-fno-exceptions -fno-rtti"
+          export VCPKG_CMAKE_CONFIGURE_OPTIONS="-DCMAKE_CXX_FLAGS=-fno-rtti"
           ~/vcpkg/vcpkg install \
             --triplet=wasm32-wasip2 \
             --overlay-triplets=$GITHUB_WORKSPACE/triplets \
