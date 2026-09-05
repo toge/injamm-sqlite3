@@ -619,7 +619,7 @@ jobs:
 
       - name: Install injamm via vcpkg (wasip1, -fno-exceptions)
         run: |
-          ~/vcpkg/vcpkg install injamm[enum] \
+          ~/vcpkg/vcpkg install \
             --triplet=wasm32-wasip1 \
             --overlay-triplets=$GITHUB_WORKSPACE/triplets \
             --x-install-root=$HOME/injamm-wasi-install \
@@ -682,7 +682,7 @@ jobs:
 
       - name: Install injamm via vcpkg (wasip2, -fno-exceptions)
         run: |
-          ~/vcpkg/vcpkg install injamm[enum] \
+          ~/vcpkg/vcpkg install \
             --triplet=wasm32-wasip2 \
             --overlay-triplets=$GITHUB_WORKSPACE/triplets \
             --x-install-root=$HOME/injamm-wasi-install-p2 \

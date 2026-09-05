@@ -14,7 +14,12 @@
       "name": "sqlite3",
       "platform": "emscripten | !wasm32"
     },
-    "enchantum"
+    "enchantum",
+    {
+      "name": "injamm",
+      "platform": "wasm32",
+      "features": ["enum"]
+    }
   ],
   "overrides": [
     {
