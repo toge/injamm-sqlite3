@@ -577,10 +577,15 @@ jobs:
           source /opt/emsdk/emsdk_env.sh
           ctest --test-dir build -V
 
-  wasip1:
+  linux-wasip1:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install build tools
+        run: sudo apt-get update && sudo apt-get install -y cmake ninja-build git curl zip unzip tar
+
       - name: Install wasi-sdk
         run: |
           WASI_VERSION=34
@@ -589,45 +594,37 @@ jobs:
           mkdir -p /opt/wasi-sdk
           tar xzf /tmp/wasi-sdk.tar.gz -C /opt/wasi-sdk --strip-components=1
           /opt/wasi-sdk/bin/clang++ --version
+
       - name: Install wasmedge
         run: |
           curl -sSf --max-time 300 https://raw.githubusercontent.com/WasmEdge/WasmEdge/master/utils/install_v2.sh | bash -s -- --version=0.17.1
           echo "$HOME/.wasmedge/bin" >> $GITHUB_PATH
-      - name: Install build tools
-        run: sudo apt-get update && sudo apt-get install -y cmake ninja-build git curl zip unzip tar
+
       - name: Restore vcpkg cache
         uses: actions/cache@v4
         with:
           path: |
             ~/vcpkg
             build-wasi/vcpkg_installed
-            injamm-build-wasi/vcpkg_installed
-          key: ${{ runner.os }}-wasip1-vcpkg-${{ hashFiles('vcpkg.json') }}
+          key: ${{ runner.os }}-wasip1-vcpkg-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}
           restore-keys: |
             ${{ runner.os }}-wasip1-vcpkg-
+
       - name: Install vcpkg
         run: |
           if [ ! -d ~/vcpkg ]; then
             git clone https://github.com/microsoft/vcpkg.git ~/vcpkg
             ~/vcpkg/bootstrap-vcpkg.sh
           fi
-      - name: Install injamm (wasip1)
+
+      - name: Install injamm via vcpkg (wasip1, -fno-exceptions)
         run: |
-          git clone $INJAMM_REPO injamm
-          cd injamm
-          git fetch --depth 1 origin $INJAMM_REF
-          git checkout FETCH_HEAD
-          cd ..
-          cmake -B injamm-build-wasi -S injamm -G Ninja \
-            -DCMAKE_TOOLCHAIN_FILE=$HOME/vcpkg/scripts/buildsystems/vcpkg.cmake \
-            -DVCPKG_TARGET_TRIPLET=wasm32-wasip1 \
-            -DVCPKG_OVERLAY_TRIPLETS=$GITHUB_WORKSPACE/triplets \
-            -DVCPKG_CHAINLOAD_TOOLCHAIN_FILE=/opt/wasi-sdk/share/cmake/wasi-sdk-p1.cmake \
-            -DCMAKE_INSTALL_PREFIX=$HOME/injamm-wasi-install \
-            -DBUILD_TEST=OFF -DBUILD_EXAMPLE=OFF \
-            -DENABLE_WASI_MINIMAL=ON
-          cmake --build injamm-build-wasi
-          cmake --install injamm-build-wasi
+          ~/vcpkg/vcpkg install injamm[enum] \
+            --triplet=wasm32-wasip1 \
+            --overlay-triplets=$GITHUB_WORKSPACE/triplets \
+            --x-install-root=$HOME/injamm-wasi-install \
+            --cmake-args=-DCMAKE_CXX_FLAGS="-fno-exceptions -fno-rtti"
+
       - name: Configure (wasip1, sqlite amalgamation)
         run: |
           cmake -B build-wasi -S . -G Ninja \
@@ -635,13 +632,77 @@ jobs:
             -DVCPKG_TARGET_TRIPLET=wasm32-wasip1 \
             -DVCPKG_OVERLAY_TRIPLETS=$GITHUB_WORKSPACE/triplets \
             -DVCPKG_CHAINLOAD_TOOLCHAIN_FILE=/opt/wasi-sdk/share/cmake/wasi-sdk-p1.cmake \
-            -DCMAKE_PREFIX_PATH=$HOME/injamm-wasi-install \
-            -Dinjamm_DIR=$HOME/injamm-wasi-install/lib/cmake/injamm \
+            -DCMAKE_PREFIX_PATH=$HOME/injamm-wasi-install/wasm32-wasip1 \
             -DINJAMM_SQLITE3_FETCH_AMALGAMATION=ON
+
       - name: Build
         run: cmake --build build-wasi
+
       - name: Test
         run: ctest --test-dir build-wasi -V
+
+  linux-wasip2:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build tools
+        run: sudo apt-get update && sudo apt-get install -y cmake ninja-build git curl zip unzip tar
+
+      - name: Install wasi-sdk
+        run: |
+          WASI_VERSION=34
+          curl -sL --max-time 300 -o /tmp/wasi-sdk.tar.gz \
+            https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-${WASI_VERSION}/wasi-sdk-${WASI_VERSION}.0-x86_64-linux.tar.gz
+          mkdir -p /opt/wasi-sdk
+          tar xzf /tmp/wasi-sdk.tar.gz -C /opt/wasi-sdk --strip-components=1
+          /opt/wasi-sdk/bin/clang++ --version
+
+      - name: Install wasmedge
+        run: |
+          curl -sSf --max-time 300 https://raw.githubusercontent.com/WasmEdge/WasmEdge/master/utils/install_v2.sh | bash -s -- --version=0.17.1
+          echo "$HOME/.wasmedge/bin" >> $GITHUB_PATH
+
+      - name: Restore vcpkg cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/vcpkg
+            build-wasi-p2/vcpkg_installed
+          key: ${{ runner.os }}-wasip2-vcpkg-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}
+          restore-keys: |
+            ${{ runner.os }}-wasip2-vcpkg-
+
+      - name: Install vcpkg
+        run: |
+          if [ ! -d ~/vcpkg ]; then
+            git clone https://github.com/microsoft/vcpkg.git ~/vcpkg
+            ~/vcpkg/bootstrap-vcpkg.sh
+          fi
+
+      - name: Install injamm via vcpkg (wasip2, -fno-exceptions)
+        run: |
+          ~/vcpkg/vcpkg install injamm[enum] \
+            --triplet=wasm32-wasip2 \
+            --overlay-triplets=$GITHUB_WORKSPACE/triplets \
+            --x-install-root=$HOME/injamm-wasi-install-p2 \
+            --cmake-args=-DCMAKE_CXX_FLAGS="-fno-exceptions -fno-rtti"
+
+      - name: Configure (wasip2, sqlite amalgamation)
+        run: |
+          cmake -B build-wasi-p2 -S . -G Ninja \
+            -DCMAKE_TOOLCHAIN_FILE=$HOME/vcpkg/scripts/buildsystems/vcpkg.cmake \
+            -DVCPKG_TARGET_TRIPLET=wasm32-wasip2 \
+            -DVCPKG_OVERLAY_TRIPLETS=$GITHUB_WORKSPACE/triplets \
+            -DVCPKG_CHAINLOAD_TOOLCHAIN_FILE=/opt/wasi-sdk/share/cmake/wasi-sdk-p2.cmake \
+            -DCMAKE_PREFIX_PATH=$HOME/injamm-wasi-install-p2/wasm32-wasip2 \
+            -DINJAMM_SQLITE3_FETCH_AMALGAMATION=ON
+
+      - name: Build
+        run: cmake --build build-wasi-p2
+
+      - name: Test
+        run: ctest --test-dir build-wasi-p2 -V
 
   macos:
     runs-on: macos-latest

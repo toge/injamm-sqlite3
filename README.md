@@ -67,7 +67,7 @@ cmake -B /tmp/injamm-wasi-b -S ~/src/injamm -G Ninja \
   -DVCPKG_CHAINLOAD_TOOLCHAIN_FILE=~/vm/wasi-sdk/share/cmake/wasi-sdk-p1.cmake \
   -DCMAKE_INSTALL_PREFIX=$HOME/.local/injamm-wasi \
   -DBUILD_TEST=OFF -DBUILD_EXAMPLE=OFF \
-  -DENABLE_WASI_MINIMAL=ON
+  -DCMAKE_CXX_FLAGS="-fno-exceptions -fno-rtti"
 cmake --build /tmp/injamm-wasi-b
 cmake --install /tmp/injamm-wasi-b
 
@@ -83,6 +83,8 @@ cmake -B build-wasi -S . -G Ninja \
 cmake --build build-wasi
 ctest --test-dir build-wasi -V   # wasmedge 経由で .wasm を実行
 ```
+
+wasip2 の場合も同様ですが、`wasip1` を `wasip2` に、`wasi-sdk-p1.cmake` を `wasi-sdk-p2.cmake` に置き換えてください。
 
 CMake オプション: `INJAMM_SQLITE3_FETCH_AMALGAMATION`(sqlite アマルガメーションを
 FetchContent で自動取得、デフォルト OFF)、`SQLITE3_AMALGAMATION_DIR`

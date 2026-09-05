@@ -1,11 +1,11 @@
 #pragma once
 
 #include <injamm/bytecode.hpp>
+#include <injamm/sqlite3/config.hpp>
 #include <injamm/sqlite3/concept.hpp>
 #include <injamm/sqlite3/executor.hpp>
 #include <injamm/bytecode_exec.hpp>
 #include <injamm/bytecode_compile.hpp>
-#include <expected>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -37,12 +37,14 @@ public:
       : bc_(injamm::detail::bc_compile<T>(tmpl, std::move(partials), trim_blocks, lstrip_blocks)) {}
 
   // 値をレンダリングし、結果文字列を返す
-  [[nodiscard]] std::expected<std::string, injamm::error_ctx> render(T const& value) const {
+  // ランタイムエラー時は unexpected(error_ctx) を返す（例外送出は禁止）
+  [[nodiscard]] expected<std::string> render(T const& value) const {
     return detail::bc_execute(bc_, value);
   }
 
   // 値をレンダリングし、out をクリアした上で結果文字列を書き込む（本体 bc_execute_into の仕様）
-  [[nodiscard]] std::expected<void, injamm::error_ctx> render(T const& value, std::string& out) const {
+  // ランタイムエラー時は unexpected(error_ctx) を返す（例外送出は禁止）
+  [[nodiscard]] expected<void> render(T const& value, std::string& out) const {
     return detail::bc_execute_into(bc_, value, out);
   }
 };

@@ -10,7 +10,9 @@
       "baseline": "f0ce0fa88190643ecc8da586851c32d7f0bfce07",
       "repository": "https://github.com/toge/my-vcpkg-ports",
       "packages": [
-        "frozenchars"
+        "frozenchars",
+        "injamm",
+        "injamm-sqlite3"
       ]
     }
   ]
