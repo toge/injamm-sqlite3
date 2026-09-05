@@ -619,11 +619,11 @@ jobs:
 
       - name: Install injamm via vcpkg (wasip1, -fno-exceptions)
         run: |
+          export VCPKG_CMAKE_CONFIGURE_OPTIONS="-DCMAKE_CXX_FLAGS=-fno-exceptions -fno-rtti"
           ~/vcpkg/vcpkg install \
             --triplet=wasm32-wasip1 \
             --overlay-triplets=$GITHUB_WORKSPACE/triplets \
-            --x-install-root=$HOME/injamm-wasi-install \
-            --cmake-args=-DCMAKE_CXX_FLAGS="-fno-exceptions -fno-rtti"
+            --x-install-root=$HOME/injamm-wasi-install
 
       - name: Configure (wasip1, sqlite amalgamation)
         run: |
@@ -682,11 +682,11 @@ jobs:
 
       - name: Install injamm via vcpkg (wasip2, -fno-exceptions)
         run: |
+          export VCPKG_CMAKE_CONFIGURE_OPTIONS="-DCMAKE_CXX_FLAGS=-fno-exceptions -fno-rtti"
           ~/vcpkg/vcpkg install \
             --triplet=wasm32-wasip2 \
             --overlay-triplets=$GITHUB_WORKSPACE/triplets \
-            --x-install-root=$HOME/injamm-wasi-install-p2 \
-            --cmake-args=-DCMAKE_CXX_FLAGS="-fno-exceptions -fno-rtti"
+            --x-install-root=$HOME/injamm-wasi-install-p2
 
       - name: Configure (wasip2, sqlite amalgamation)
         run: |
