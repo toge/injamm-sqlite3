@@ -1,7 +1,10 @@
 {
   "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
   "dependencies": [
-    "glaze",
+    {
+      "name": "glaze",
+      "platform": "!wasm32"
+    },
     {
       "name": "fmt",
       "platform": "osx | linux"
