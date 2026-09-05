@@ -605,7 +605,7 @@ jobs:
         with:
           path: |
             ~/vcpkg
-            build-wasi/vcpkg_installed
+            injamm-build/vcpkg_installed
           key: ${{ runner.os }}-wasip1-vcpkg-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}
           restore-keys: |
             ${{ runner.os }}-wasip1-vcpkg-
@@ -616,15 +616,24 @@ jobs:
             git clone https://github.com/microsoft/vcpkg.git ~/vcpkg
             ~/vcpkg/bootstrap-vcpkg.sh
           fi
-          git -C ~/vcpkg fetch --all --quiet
 
-      - name: Install injamm via vcpkg (wasip1, -fno-rtti)
+      - name: Install injamm (wasip1, -fno-rtti)
         run: |
-          export VCPKG_CMAKE_CONFIGURE_OPTIONS="-DCMAKE_CXX_FLAGS=-fno-rtti -DBUILD_TEST=OFF"
-          ~/vcpkg/vcpkg install \
-            --triplet=wasm32-wasip1 \
-            --overlay-triplets=$GITHUB_WORKSPACE/triplets \
-            --x-install-root=$HOME/injamm-wasi-install
+          git clone $INJAMM_REPO injamm
+          cd injamm
+          git fetch --depth 1 origin $INJAMM_REF
+          git checkout FETCH_HEAD
+          cd ..
+          cmake -B injamm-build -S injamm -G Ninja \
+            -DCMAKE_TOOLCHAIN_FILE=$HOME/vcpkg/scripts/buildsystems/vcpkg.cmake \
+            -DVCPKG_TARGET_TRIPLET=wasm32-wasip1 \
+            -DVCPKG_OVERLAY_TRIPLETS=$GITHUB_WORKSPACE/triplets \
+            -DVCPKG_CHAINLOAD_TOOLCHAIN_FILE=/opt/wasi-sdk/share/cmake/wasi-sdk-p1.cmake \
+            -DCMAKE_INSTALL_PREFIX=$HOME/injamm-install \
+            -DCMAKE_CXX_FLAGS="-fno-rtti" \
+            -DBUILD_TEST=OFF -DBUILD_EXAMPLE=OFF
+          cmake --build injamm-build
+          cmake --install injamm-build
 
       - name: Configure (wasip1, sqlite amalgamation)
         run: |
@@ -633,7 +642,7 @@ jobs:
             -DVCPKG_TARGET_TRIPLET=wasm32-wasip1 \
             -DVCPKG_OVERLAY_TRIPLETS=$GITHUB_WORKSPACE/triplets \
             -DVCPKG_CHAINLOAD_TOOLCHAIN_FILE=/opt/wasi-sdk/share/cmake/wasi-sdk-p1.cmake \
-            -DCMAKE_PREFIX_PATH=$HOME/injamm-wasi-install/wasm32-wasip1 \
+            -DCMAKE_PREFIX_PATH=$HOME/injamm-install \
             -DINJAMM_SQLITE3_FETCH_AMALGAMATION=ON
 
       - name: Build
@@ -669,7 +678,7 @@ jobs:
         with:
           path: |
             ~/vcpkg
-            build-wasi-p2/vcpkg_installed
+            injamm-build/vcpkg_installed
           key: ${{ runner.os }}-wasip2-vcpkg-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}
           restore-keys: |
             ${{ runner.os }}-wasip2-vcpkg-
@@ -680,15 +689,24 @@ jobs:
             git clone https://github.com/microsoft/vcpkg.git ~/vcpkg
             ~/vcpkg/bootstrap-vcpkg.sh
           fi
-          git -C ~/vcpkg fetch --all --quiet
 
-      - name: Install injamm via vcpkg (wasip2, -fno-rtti)
+      - name: Install injamm (wasip2, -fno-rtti)
         run: |
-          export VCPKG_CMAKE_CONFIGURE_OPTIONS="-DCMAKE_CXX_FLAGS=-fno-rtti -DBUILD_TEST=OFF"
-          ~/vcpkg/vcpkg install \
-            --triplet=wasm32-wasip2 \
-            --overlay-triplets=$GITHUB_WORKSPACE/triplets \
-            --x-install-root=$HOME/injamm-wasi-install-p2
+          git clone $INJAMM_REPO injamm
+          cd injamm
+          git fetch --depth 1 origin $INJAMM_REF
+          git checkout FETCH_HEAD
+          cd ..
+          cmake -B injamm-build -S injamm -G Ninja \
+            -DCMAKE_TOOLCHAIN_FILE=$HOME/vcpkg/scripts/buildsystems/vcpkg.cmake \
+            -DVCPKG_TARGET_TRIPLET=wasm32-wasip2 \
+            -DVCPKG_OVERLAY_TRIPLETS=$GITHUB_WORKSPACE/triplets \
+            -DVCPKG_CHAINLOAD_TOOLCHAIN_FILE=/opt/wasi-sdk/share/cmake/wasi-sdk-p2.cmake \
+            -DCMAKE_INSTALL_PREFIX=$HOME/injamm-install \
+            -DCMAKE_CXX_FLAGS="-fno-rtti" \
+            -DBUILD_TEST=OFF -DBUILD_EXAMPLE=OFF
+          cmake --build injamm-build
+          cmake --install injamm-build
 
       - name: Configure (wasip2, sqlite amalgamation)
         run: |
@@ -697,7 +715,7 @@ jobs:
             -DVCPKG_TARGET_TRIPLET=wasm32-wasip2 \
             -DVCPKG_OVERLAY_TRIPLETS=$GITHUB_WORKSPACE/triplets \
             -DVCPKG_CHAINLOAD_TOOLCHAIN_FILE=/opt/wasi-sdk/share/cmake/wasi-sdk-p2.cmake \
-            -DCMAKE_PREFIX_PATH=$HOME/injamm-wasi-install-p2/wasm32-wasip2 \
+            -DCMAKE_PREFIX_PATH=$HOME/injamm-install \
             -DINJAMM_SQLITE3_FETCH_AMALGAMATION=ON
 
       - name: Build
