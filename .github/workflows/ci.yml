@@ -617,6 +617,9 @@ jobs:
             ~/vcpkg/bootstrap-vcpkg.sh
           fi
 
+      - name: Update vcpkg ports
+        run: ~/vcpkg/vcpkg update
+
       - name: Install injamm via vcpkg (wasip1, -fno-rtti)
         run: |
           export VCPKG_CMAKE_CONFIGURE_OPTIONS="-DCMAKE_CXX_FLAGS=-fno-rtti -DBUILD_TEST=OFF"
@@ -679,6 +682,9 @@ jobs:
             git clone https://github.com/microsoft/vcpkg.git ~/vcpkg
             ~/vcpkg/bootstrap-vcpkg.sh
           fi
+
+      - name: Update vcpkg ports
+        run: ~/vcpkg/vcpkg update
 
       - name: Install injamm via vcpkg (wasip2, -fno-rtti)
         run: |
