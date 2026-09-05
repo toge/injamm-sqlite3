@@ -616,9 +616,7 @@ jobs:
             git clone https://github.com/microsoft/vcpkg.git ~/vcpkg
             ~/vcpkg/bootstrap-vcpkg.sh
           fi
-
-      - name: Update vcpkg ports
-        run: ~/vcpkg/vcpkg update
+          git -C ~/vcpkg fetch --all --quiet
 
       - name: Install injamm via vcpkg (wasip1, -fno-rtti)
         run: |
@@ -682,9 +680,7 @@ jobs:
             git clone https://github.com/microsoft/vcpkg.git ~/vcpkg
             ~/vcpkg/bootstrap-vcpkg.sh
           fi
-
-      - name: Update vcpkg ports
-        run: ~/vcpkg/vcpkg update
+          git -C ~/vcpkg fetch --all --quiet
 
       - name: Install injamm via vcpkg (wasip2, -fno-rtti)
         run: |
