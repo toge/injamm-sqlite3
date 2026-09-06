@@ -8,7 +8,7 @@ on:
 
 env:
   # テスト済み injamm リビジョン (README の記載と合わせて更新する)
-  INJAMM_REF: 0c459eac829c9d6b63276ab7b0afa8bc6b52c0fa
+  INJAMM_REF: e12b19f7adbc243cf210badef3486a09b2deac9f
   INJAMM_REPO: https://github.com/toge/injamm.git
 
 jobs:
