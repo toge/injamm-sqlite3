@@ -600,40 +600,17 @@ jobs:
           curl -sSf --max-time 300 https://raw.githubusercontent.com/WasmEdge/WasmEdge/master/utils/install_v2.sh | bash -s -- --version=0.17.1
           echo "$HOME/.wasmedge/bin" >> $GITHUB_PATH
 
-      - name: Restore vcpkg cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/vcpkg
-            build-wasi/vcpkg_installed
-            injamm-build/vcpkg_installed
-          key: ${{ runner.os }}-wasip1-vcpkg-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}-v3
-          restore-keys: |
-            ${{ runner.os }}-wasip1-vcpkg-
-
-      - name: Install vcpkg
-        run: |
-          if [ ! -d ~/vcpkg ]; then
-            git clone https://github.com/microsoft/vcpkg.git ~/vcpkg
-            ~/vcpkg/bootstrap-vcpkg.sh
-          fi
-
-      - name: Install injamm (wasip1, -fno-rtti)
+      - name: Install injamm (wasip1, header-only)
         run: |
           git clone $INJAMM_REPO injamm
           cd injamm
           git fetch --depth 1 origin $INJAMM_REF
           git checkout FETCH_HEAD
           cd ..
-          cmake -B injamm-build -S injamm -G Ninja \
-            -DCMAKE_TOOLCHAIN_FILE=$HOME/vcpkg/scripts/buildsystems/vcpkg.cmake \
-            -DVCPKG_TARGET_TRIPLET=wasm32-wasip1 \
-            -DVCPKG_OVERLAY_TRIPLETS=$GITHUB_WORKSPACE/triplets \
-            -DVCPKG_CHAINLOAD_TOOLCHAIN_FILE=/opt/wasi-sdk/share/cmake/wasi-sdk-p1.cmake \
+          cmake -B injamm-build -S injamm \
             -DCMAKE_INSTALL_PREFIX=$HOME/injamm-install \
             -DCMAKE_CXX_FLAGS="-fno-rtti" \
             -DBUILD_TEST=OFF -DBUILD_EXAMPLE=OFF
-          cmake --build injamm-build --target injamm
           cmake --install injamm-build
 
       - name: Configure (wasip1, sqlite amalgamation)
@@ -674,40 +651,17 @@ jobs:
           curl -sSf --max-time 300 https://raw.githubusercontent.com/WasmEdge/WasmEdge/master/utils/install_v2.sh | bash -s -- --version=0.17.1
           echo "$HOME/.wasmedge/bin" >> $GITHUB_PATH
 
-      - name: Restore vcpkg cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/vcpkg
-            build-wasi-p2/vcpkg_installed
-            injamm-build/vcpkg_installed
-          key: ${{ runner.os }}-wasip2-vcpkg-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}-v3
-          restore-keys: |
-            ${{ runner.os }}-wasip2-vcpkg-
-
-      - name: Install vcpkg
-        run: |
-          if [ ! -d ~/vcpkg ]; then
-            git clone https://github.com/microsoft/vcpkg.git ~/vcpkg
-            ~/vcpkg/bootstrap-vcpkg.sh
-          fi
-
-      - name: Install injamm (wasip2, -fno-rtti)
+      - name: Install injamm (wasip2, header-only)
         run: |
           git clone $INJAMM_REPO injamm
           cd injamm
           git fetch --depth 1 origin $INJAMM_REF
           git checkout FETCH_HEAD
           cd ..
-          cmake -B injamm-build -S injamm -G Ninja \
-            -DCMAKE_TOOLCHAIN_FILE=$HOME/vcpkg/scripts/buildsystems/vcpkg.cmake \
-            -DVCPKG_TARGET_TRIPLET=wasm32-wasip2 \
-            -DVCPKG_OVERLAY_TRIPLETS=$GITHUB_WORKSPACE/triplets \
-            -DVCPKG_CHAINLOAD_TOOLCHAIN_FILE=/opt/wasi-sdk/share/cmake/wasi-sdk-p2.cmake \
+          cmake -B injamm-build -S injamm \
             -DCMAKE_INSTALL_PREFIX=$HOME/injamm-install \
             -DCMAKE_CXX_FLAGS="-fno-rtti" \
             -DBUILD_TEST=OFF -DBUILD_EXAMPLE=OFF
-          cmake --build injamm-build --target injamm
           cmake --install injamm-build
 
       - name: Configure (wasip2, sqlite amalgamation)
