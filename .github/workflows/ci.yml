@@ -623,12 +623,11 @@ jobs:
           git checkout FETCH_HEAD
           cd ..
           cmake -B injamm-build -S injamm -G Ninja \
-            -DCMAKE_TOOLCHAIN_FILE=$HOME/vcpkg/scripts/buildsystems/vcpkg.cmake \
-            -DVCPKG_TARGET_TRIPLET=wasm32-wasip1 \
-            -DVCPKG_OVERLAY_TRIPLETS=$GITHUB_WORKSPACE/triplets \
-            -DVCPKG_CHAINLOAD_TOOLCHAIN_FILE=/opt/wasi-sdk/share/cmake/wasi-sdk-p1.cmake \
+            -DCMAKE_TOOLCHAIN_FILE=/opt/wasi-sdk/share/cmake/wasi-sdk-p1.cmake \
             -DCMAKE_INSTALL_PREFIX=$HOME/injamm-install \
-            -DCMAKE_CXX_FLAGS="-fno-rtti"
+            -DCMAKE_PREFIX_PATH=$HOME/vcpkg/installed/wasm32-wasip1 \
+            -DCMAKE_CXX_FLAGS="-fno-rtti" \
+            -DBUILD_TEST=OFF
           cmake --install injamm-build
 
       - name: Configure (wasip1, sqlite amalgamation)
@@ -689,12 +688,11 @@ jobs:
           git checkout FETCH_HEAD
           cd ..
           cmake -B injamm-build -S injamm -G Ninja \
-            -DCMAKE_TOOLCHAIN_FILE=$HOME/vcpkg/scripts/buildsystems/vcpkg.cmake \
-            -DVCPKG_TARGET_TRIPLET=wasm32-wasip2 \
-            -DVCPKG_OVERLAY_TRIPLETS=$GITHUB_WORKSPACE/triplets \
-            -DVCPKG_CHAINLOAD_TOOLCHAIN_FILE=/opt/wasi-sdk/share/cmake/wasi-sdk-p2.cmake \
+            -DCMAKE_TOOLCHAIN_FILE=/opt/wasi-sdk/share/cmake/wasi-sdk-p2.cmake \
             -DCMAKE_INSTALL_PREFIX=$HOME/injamm-install \
-            -DCMAKE_CXX_FLAGS="-fno-rtti"
+            -DCMAKE_PREFIX_PATH=$HOME/vcpkg/installed/wasm32-wasip2 \
+            -DCMAKE_CXX_FLAGS="-fno-rtti" \
+            -DBUILD_TEST=OFF
           cmake --install injamm-build
 
       - name: Configure (wasip2, sqlite amalgamation)
