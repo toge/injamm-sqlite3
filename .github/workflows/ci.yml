@@ -633,7 +633,7 @@ jobs:
             -DCMAKE_INSTALL_PREFIX=$HOME/injamm-install \
             -DCMAKE_CXX_FLAGS="-fno-rtti" \
             -DBUILD_TEST=OFF -DBUILD_EXAMPLE=OFF
-          cmake --build injamm-build
+          cmake --build injamm-build --target injamm
           cmake --install injamm-build
 
       - name: Configure (wasip1, sqlite amalgamation)
@@ -707,7 +707,7 @@ jobs:
             -DCMAKE_INSTALL_PREFIX=$HOME/injamm-install \
             -DCMAKE_CXX_FLAGS="-fno-rtti" \
             -DBUILD_TEST=OFF -DBUILD_EXAMPLE=OFF
-          cmake --build injamm-build
+          cmake --build injamm-build --target injamm
           cmake --install injamm-build
 
       - name: Configure (wasip2, sqlite amalgamation)
