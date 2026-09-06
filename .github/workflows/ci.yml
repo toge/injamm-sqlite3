@@ -607,7 +607,7 @@ jobs:
             ~/vcpkg
             build-wasi/vcpkg_installed
             injamm-build/vcpkg_installed
-          key: ${{ runner.os }}-wasip1-vcpkg-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}-v2
+          key: ${{ runner.os }}-wasip1-vcpkg-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}-v3
           restore-keys: |
             ${{ runner.os }}-wasip1-vcpkg-
 
@@ -681,7 +681,7 @@ jobs:
             ~/vcpkg
             build-wasi-p2/vcpkg_installed
             injamm-build/vcpkg_installed
-          key: ${{ runner.os }}-wasip2-vcpkg-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}-v2
+          key: ${{ runner.os }}-wasip2-vcpkg-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}-v3
           restore-keys: |
             ${{ runner.os }}-wasip2-vcpkg-
 
