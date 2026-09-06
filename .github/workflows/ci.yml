@@ -604,7 +604,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/vcpkg
-          key: ${{ runner.os }}-wasip1-vcpkg-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}-v4
+          key: ${{ runner.os }}-wasip1-vcpkg-v5
 
       - name: Install vcpkg
         run: |
@@ -668,7 +668,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/vcpkg
-          key: ${{ runner.os }}-wasip2-vcpkg-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}-v4
+          key: ${{ runner.os }}-wasip2-vcpkg-v5
 
       - name: Install vcpkg
         run: |
