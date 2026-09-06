@@ -634,7 +634,7 @@ jobs:
         run: |
           cmake -B build-wasi -S . -G Ninja \
             -DCMAKE_TOOLCHAIN_FILE=/opt/wasi-sdk/share/cmake/wasi-sdk-p1.cmake \
-            -DCMAKE_PREFIX_PATH=$HOME/injamm-install \
+            -DCMAKE_PREFIX_PATH="$HOME/injamm-install;$HOME/vcpkg/installed/wasm32-wasip1" \
             -DINJAMM_SQLITE3_FETCH_AMALGAMATION=ON
 
       - name: Build
@@ -699,7 +699,7 @@ jobs:
         run: |
           cmake -B build-wasi-p2 -S . -G Ninja \
             -DCMAKE_TOOLCHAIN_FILE=/opt/wasi-sdk/share/cmake/wasi-sdk-p2.cmake \
-            -DCMAKE_PREFIX_PATH=$HOME/injamm-install \
+            -DCMAKE_PREFIX_PATH="$HOME/injamm-install;$HOME/vcpkg/installed/wasm32-wasip2" \
             -DINJAMM_SQLITE3_FETCH_AMALGAMATION=ON
 
       - name: Build
