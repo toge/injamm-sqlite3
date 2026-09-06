@@ -604,7 +604,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/vcpkg
-          key: ${{ runner.os }}-wasip1-vcpkg-v6
+          key: ${{ runner.os }}-wasip1-vcpkg-v7
 
       - name: Install vcpkg
         run: |
@@ -612,7 +612,7 @@ jobs:
             git clone https://github.com/microsoft/vcpkg.git ~/vcpkg
             ~/vcpkg/bootstrap-vcpkg.sh
           fi
-          ~/vcpkg/vcpkg install --triplet=wasm32-wasip1 glaze catch2 enchantum
+          ~/vcpkg/vcpkg install --triplet=wasm32-wasip1 --overlay-triplets=$GITHUB_WORKSPACE/triplets glaze catch2 enchantum
 
       - name: Install injamm (wasip1)
         run: |
@@ -669,7 +669,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/vcpkg
-          key: ${{ runner.os }}-wasip2-vcpkg-v6
+          key: ${{ runner.os }}-wasip2-vcpkg-v7
 
       - name: Install vcpkg
         run: |
@@ -677,7 +677,7 @@ jobs:
             git clone https://github.com/microsoft/vcpkg.git ~/vcpkg
             ~/vcpkg/bootstrap-vcpkg.sh
           fi
-          ~/vcpkg/vcpkg install --triplet=wasm32-wasip2 glaze catch2 enchantum
+          ~/vcpkg/vcpkg install --triplet=wasm32-wasip2 --overlay-triplets=$GITHUB_WORKSPACE/triplets glaze catch2 enchantum
 
       - name: Install injamm (wasip2)
         run: |
