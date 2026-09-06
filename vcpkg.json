@@ -7,8 +7,7 @@
       "platform": "osx | linux"
     },
     {
-      "name": "catch2",
-      "platform": "emscripten | !wasm32"
+      "name": "catch2"
     },
     {
       "name": "sqlite3",
