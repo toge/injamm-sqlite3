@@ -612,7 +612,8 @@ jobs:
             git clone https://github.com/microsoft/vcpkg.git ~/vcpkg
             ~/vcpkg/bootstrap-vcpkg.sh
           fi
-          VCPKG_MANIFEST_MODE=OFF ~/vcpkg/vcpkg install --triplet=wasm32-wasip1 --overlay-triplets=$GITHUB_WORKSPACE/triplets glaze catch2 enchantum
+          cd ~
+          ~/vcpkg/vcpkg install --triplet=wasm32-wasip1 --overlay-triplets=$GITHUB_WORKSPACE/triplets glaze catch2 enchantum
 
       - name: Install injamm (wasip1)
         run: |
@@ -677,7 +678,8 @@ jobs:
             git clone https://github.com/microsoft/vcpkg.git ~/vcpkg
             ~/vcpkg/bootstrap-vcpkg.sh
           fi
-          VCPKG_MANIFEST_MODE=OFF ~/vcpkg/vcpkg install --triplet=wasm32-wasip2 --overlay-triplets=$GITHUB_WORKSPACE/triplets glaze catch2 enchantum
+          cd ~
+          ~/vcpkg/vcpkg install --triplet=wasm32-wasip2 --overlay-triplets=$GITHUB_WORKSPACE/triplets glaze catch2 enchantum
 
       - name: Install injamm (wasip2)
         run: |
